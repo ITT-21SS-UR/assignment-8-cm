@@ -1,0 +1,10 @@
+.vscode/
+.idea/
+.ipynb_checkpoints/
+*.swp
+__pycache__/
+.run/
+analyze.py
+custom_nodes2.py
+notes.txt
+

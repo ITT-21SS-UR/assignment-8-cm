@@ -1,0 +1,3 @@
+class ActivityModel:
+    # TODO
+    pass
