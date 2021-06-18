@@ -90,7 +90,7 @@ class MainWindow(QtWidgets.QWidget):
                                            self.__feature_extraction_filter_node[NodeInputOutputType.ACCEL_Z.value])
 
     def __setup_gesture(self):
-        self.__activity_recognition_node = self.__flow_chart.createNode(NodeType.GESTURE.value,
+        self.__gesture_node = self.__flow_chart.createNode(NodeType.GESTURE.value,
                                                                         pos=(300, 50))
 
         # TODO output
@@ -121,7 +121,8 @@ def start_program():
 def read_port_number():
     if len(sys.argv) < 2:
         sys.stderr.write("Please give a port number as argument (￢_￢)\n")
-        sys.exit(1)
+        # sys.exit(1) # TODO uncomment
+        return 5700
 
     return sys.argv[1]
 
