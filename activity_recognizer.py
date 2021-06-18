@@ -5,9 +5,15 @@ from pyqtgraph.Qt import QtGui, QtCore
 from pyqtgraph.flowchart import Flowchart
 
 from activity_model import ActivityModel
-from custom_nodes import NodeType, NodeInputOutputType
+from node_constants import NodeType, NodeInputOutputType
+from gesture_node import GestureNode
+from custom_nodes import FeatureExtractionFilterNode, DisplayTextNode
 from DIPPID_pyqtnode import BufferNode, DIPPIDNode
-# from DIPPID_pyqtnode import BufferNode, DIPPIDNode # TODO add if removed after automatic code refactoring
+
+# TODO add if removed after automatic code refactoring
+# from gesture_node import GestureNode
+# from custom_nodes import FeatureExtractionFilterNode, DisplayTextNode
+# from DIPPID_pyqtnode import BufferNode, DIPPIDNode
 
 """
 The workload was distributed evenly and tasks were discussed together.
@@ -43,7 +49,7 @@ class MainWindow(QtWidgets.QWidget):
         self.__setup_dippid()
         self.__setup_buffers()
         self.__setup_feature_extraction_filter()
-        self.__setup_activity_recognition()
+        self.__setup_gesture()
         self.__setup_display_text()
 
         self.setLayout(self.__layout)
@@ -83,8 +89,8 @@ class MainWindow(QtWidgets.QWidget):
         self.__flow_chart.connectTerminals(self.__buffer_node_z[NodeInputOutputType.DATA_OUT.value],
                                            self.__feature_extraction_filter_node[NodeInputOutputType.ACCEL_Z.value])
 
-    def __setup_activity_recognition(self):
-        self.__activity_recognition_node = self.__flow_chart.createNode(NodeType.ACTIVITY_RECOGNITION.value,
+    def __setup_gesture(self):
+        self.__activity_recognition_node = self.__flow_chart.createNode(NodeType.GESTURE.value,
                                                                         pos=(300, 50))
 
         # TODO output
@@ -102,12 +108,12 @@ class MainWindow(QtWidgets.QWidget):
 def start_program():
     port_number = read_port_number()
 
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     main_window = MainWindow(port_number)
     main_window.show()
 
     if (sys.flags.interactive != 1) or not hasattr(QtCore, "PYQT_VERSION"):
-        sys.exit(QtGui.QApplication.instance().exec_())
+        sys.exit(QtWidgets.QApplication.instance().exec_())
 
     sys.exit(app.exec_())
 

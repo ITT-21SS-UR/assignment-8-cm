@@ -1,29 +1,10 @@
-from enum import Enum
-
 import pyqtgraph.flowchart.library as fclib
 from pyqtgraph.flowchart import Node
 
-
-class NodeType(Enum):
-    DIPPID = "DIPPID"
-    BUFFER = "Buffer"
-    FEATURE_EXTRACTION_FILTER = "FeatureExtractionFilter"
-    ACTIVITY_RECOGNITION = "ActivityRecognition"
-    DISPLAY_TEXT = "DisplayText"
+from node_constants import NodeType, NodeInputOutputType
 
 
-class NodeInputOutputType(Enum):  # TODO
-    DATA_IN = "dataIn"
-    DATA_OUT = "dataOut"
-    ACCEL_X = "accelX"
-    ACCEL_Y = "accelY"
-    ACCEL_Z = "accelZ"
-    FREQUENCY_SPECTROGRAM = "frequency"
-    SAMPLE = "sample"
-    PREDICTED_CATEGORY = "category"
-
-
-class FeatureExtractionFilterNode(Node):  # FftNode
+class FeatureExtractionFilterNode(Node):
     nodeName = NodeType.FEATURE_EXTRACTION_FILTER.value
 
     def __init__(self, name):
@@ -44,29 +25,7 @@ class FeatureExtractionFilterNode(Node):  # FftNode
 fclib.registerNodeType(FeatureExtractionFilterNode, [(NodeType.FEATURE_EXTRACTION_FILTER.value,)])
 
 
-class ActivityRecognitionNode(Node):  # SvmNode
-    nodeName = NodeType.ACTIVITY_RECOGNITION.value
-
-    def __init__(self, name):
-        terminals = {
-            # TODO
-            NodeInputOutputType.SAMPLE.value: dict(io="in"),
-            NodeInputOutputType.PREDICTED_CATEGORY.value: dict(io="out")
-        }
-
-        # TODO UI
-
-        Node.__init__(self, name, terminals=terminals)
-
-    def process(self, **kwargs):
-        # TODO
-        pass
-
-
-fclib.registerNodeType(ActivityRecognitionNode, [(NodeType.ACTIVITY_RECOGNITION.value,)])
-
-
-class DisplayTextNode(Node):
+class DisplayTextNode(Node):  # TODO move to separate file
     nodeName = NodeType.DISPLAY_TEXT.value
 
     def __init__(self, name):
