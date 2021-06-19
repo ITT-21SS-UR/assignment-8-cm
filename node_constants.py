@@ -1,10 +1,4 @@
 from enum import Enum
-class NodeType(Enum):
-    DIPPID = "DIPPID"
-    BUFFER = "Buffer"
-    FEATURE_EXTRACTION_FILTER = "FeatureExtractionFilter"
-    GESTURE = "Gesture"
-    DISPLAY_TEXT = "DisplayText"
 
 
 class NodeInputOutputType(Enum):  # TODO
@@ -13,6 +7,6 @@ class NodeInputOutputType(Enum):  # TODO
     ACCEL_X = "accelX"
     ACCEL_Y = "accelY"
     ACCEL_Z = "accelZ"
-    FREQUENCY_SPECTROGRAM = "frequency"
+    FREQUENCY_SPECTROGRAM = "spectrogram"
     SAMPLE = "sample"
     PREDICTED_CATEGORY = "category"

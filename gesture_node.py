@@ -5,7 +5,7 @@ from PyQt5.QtCore import pyqtSignal, QObject
 from pyqtgraph.Qt import QtWidgets
 from pyqtgraph.flowchart import Node
 
-from node_constants import NodeType, NodeInputOutputType
+from node_constants import NodeInputOutputType
 
 
 class GestureNodeState(Enum):
@@ -15,7 +15,11 @@ class GestureNodeState(Enum):
 
 
 class GestureNode(Node):
-    nodeName = NodeType.GESTURE.value
+    nodeName = "Gesture"
+
+    @staticmethod
+    def get_node_name():
+        return GestureNode.nodeName
 
     def __init__(self, name):
         terminals = {
@@ -34,6 +38,12 @@ class GestureNode(Node):
 
     def ctrlWidget(self):
         return self.__gesture_node_widget
+
+    # def handle_button_press(data):
+    #   pass
+
+
+fclib.registerNodeType(GestureNode, [(GestureNode.nodeName,)])
 
 
 class GestureNodeWidget(QtWidgets.QWidget):
@@ -126,13 +136,11 @@ class GestureNodeWidget(QtWidgets.QWidget):
         QtWidgets.QMessageBox.warning(self, "No Gesture selected", "No gesture name was selected")
 
     def __rename_gesture_button_clicked(self):
+        # TODO do we need that?
         if not self.__is_gesture_item_selected():
             self.__show_no_gesture_item_selected()
             return
 
-        # do we need that?
-        # TODO check if list item selected
-        print("rename")
         gesture_name, ok = QtWidgets.QInputDialog.getText(self, "Rename gesture", "gesture name")
 
         if gesture_name:
@@ -154,11 +162,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
             return
 
         # TODO ask user if he really wants to delete this item
-
-        selected_item = self.__gesture_list.currentItem()
-        self.__gesture_model.remove_gesture(selected_item.text())
-
-        self.__gesture_list.takeItem(self.__gesture_list.currentRow())
+        self.__show_gesture_confirm_removal()
 
     def __setup_gesture_list(self):
         # TODO
@@ -166,9 +170,10 @@ class GestureNodeWidget(QtWidgets.QWidget):
         self.__layout.addWidget(self.__gesture_list)
 
     def __connect_signals(self):
-        self.__gesture_model.gesture_item_added.connect(self.__add_gesture_item)
         self.__gesture_model.gesture_name_exists.connect(self.__show_gesture_name_exits)
-        # TODO train, rename, delete
+        self.__gesture_model.gesture_item_added.connect(self.__add_gesture_item)
+
+        # TODO train, rename
 
     def __add_gesture_item(self, gesture_name: str):
         gesture_item = QtWidgets.QListWidgetItem(gesture_name)
@@ -177,18 +182,26 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
     def __show_gesture_name_exits(self, gesture_name: str):
         QtWidgets.QMessageBox.warning(self, "Gesture name exists",
-                                      "Gesture name \"{}\" already exists (-_-)".format(gesture_name))
+                                      "Gesture name \"{}\" already exists. (-_-)".format(gesture_name))
 
+    def __show_gesture_confirm_removal(self):
+        gesture_name = self.__gesture_list.currentItem().text()
 
-fclib.registerNodeType(GestureNode, [(NodeType.GESTURE.value,)])
+        remove_reply = QtWidgets.QMessageBox.question(self, "Remove gesture", "Are you sure to remove gesture \"{}\".\n"
+                                                                              "The action can't be undone."
+                                                      .format(gesture_name))
+
+        if remove_reply == QtWidgets.QMessageBox.Yes:
+            self.__gesture_model.remove_gesture(gesture_name)
+            self.__gesture_list.takeItem(self.__gesture_list.currentRow())
 
 
 class GestureNodeModel(QObject):
     GESTURE_NAME = "gesture_name"
     GESTURE_DATA = "gesture_data"
 
-    gesture_item_added = pyqtSignal([str])
     gesture_name_exists = pyqtSignal([str])
+    gesture_item_added = pyqtSignal([str])
 
     def __init__(self):
         super().__init__()
@@ -230,7 +243,7 @@ class GestureNodeModel(QObject):
         pass
 
     def remove_gesture(self, gesture_name: str):
-        pass
+        self.__gestures = [item for item in self.__gestures if not (item[self.GESTURE_NAME] == gesture_name)]
 
     def set_gesture_state(self, state):
         self.__gesture_state = state

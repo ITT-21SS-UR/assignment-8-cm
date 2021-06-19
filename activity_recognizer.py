@@ -1,19 +1,15 @@
 import sys
 
+import pyqtgraph as pg
 from PyQt5 import QtWidgets
-from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.Qt import QtCore
 from pyqtgraph.flowchart import Flowchart
 
-from activity_model import ActivityModel
-from node_constants import NodeType, NodeInputOutputType
-from gesture_node import GestureNode
-from custom_nodes import FeatureExtractionFilterNode, DisplayTextNode
 from DIPPID_pyqtnode import BufferNode, DIPPIDNode
-
-# TODO add if removed after automatic code refactoring
-# from gesture_node import GestureNode
-# from custom_nodes import FeatureExtractionFilterNode, DisplayTextNode
-# from DIPPID_pyqtnode import BufferNode, DIPPIDNode
+from activity_model import ActivityModel
+from custom_nodes import FeatureExtractionFilterNode, DisplayTextNode
+from gesture_node import GestureNode
+from node_constants import NodeInputOutputType
 
 """
 The workload was distributed evenly and tasks were discussed together.
@@ -43,7 +39,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def __setup_flowchart(self):
         self.__flow_chart = Flowchart(terminals={})
-        self.__layout = QtGui.QGridLayout()
+        self.__layout = QtWidgets.QGridLayout()
         self.__layout.addWidget(self.__flow_chart.widget(), 0, 0, 2, 1)
 
         self.__setup_dippid()
@@ -55,7 +51,7 @@ class MainWindow(QtWidgets.QWidget):
         self.setLayout(self.__layout)
 
     def __setup_dippid(self):
-        self.__dippid_node = self.__flow_chart.createNode(NodeType.DIPPID.value, pos=(0, 0))
+        self.__dippid_node = self.__flow_chart.createNode(DIPPIDNode.nodeName, pos=(0, 0))
         self.__dippid_node.set_port(self.__model.get_port_number())
 
     def __setup_buffers(self):
@@ -64,23 +60,47 @@ class MainWindow(QtWidgets.QWidget):
         self.__setup_buffer_z()
 
     def __setup_buffer_x(self):
-        self.__buffer_node_x = self.__flow_chart.createNode(NodeType.BUFFER.value, pos=(150, -100))
+        self.__buffer_node_x = self.__flow_chart.createNode(BufferNode.nodeName, pos=(150, -100))
         self.__flow_chart.connectTerminals(self.__dippid_node[NodeInputOutputType.ACCEL_X.value],
                                            self.__buffer_node_x[NodeInputOutputType.DATA_IN.value])
 
     def __setup_buffer_y(self):
-        self.__buffer_node_y = self.__flow_chart.createNode(NodeType.BUFFER.value, pos=(150, 0))
+        self.__buffer_node_y = self.__flow_chart.createNode(BufferNode.nodeName, pos=(150, 0))
         self.__flow_chart.connectTerminals(self.__dippid_node[NodeInputOutputType.ACCEL_Y.value],
                                            self.__buffer_node_y[NodeInputOutputType.DATA_IN.value])
 
     def __setup_buffer_z(self):
-        self.__buffer_node_z = self.__flow_chart.createNode(NodeType.BUFFER.value, pos=(150, 100))
+        self.__buffer_node_z = self.__flow_chart.createNode(BufferNode.nodeName, pos=(150, 100))
         self.__flow_chart.connectTerminals(self.__dippid_node[NodeInputOutputType.ACCEL_Z.value],
                                            self.__buffer_node_z[NodeInputOutputType.DATA_IN.value])
 
     def __setup_feature_extraction_filter(self):
-        self.__feature_extraction_filter_node = self.__flow_chart.createNode(NodeType.FEATURE_EXTRACTION_FILTER.value,
-                                                                             pos=(300, -75))
+        # TODO separate functions
+        # TODO plot for time signal
+        plot_time_signal = pg.PlotWidget()
+        plot_time_signal.setTitle("time signal")
+
+        plot_time_signal_node = self.__flow_chart.createNode("PlotWidget", pos=(300, 80))
+        plot_time_signal_node.setPlot(plot_time_signal)
+
+        self.__layout.addWidget(plot_time_signal, 0, 1)
+
+        # TODO show spectrogram
+        plot_spectrogram = pg.PlotWidget()
+        plot_spectrogram.setTitle("spectrogram")
+        plot_spectrogram.setYRange(-2, 2)
+        # what are the axis "Frequency [Hz]" "Time [sec]" "Amplitude" "Intensity"
+
+        plot_spectrogram_node = self.__flow_chart.createNode("PlotWidget", pos=(300, 80))
+        plot_spectrogram_node.setPlot(plot_spectrogram)
+
+        self.__layout.addWidget(plot_spectrogram, 1, 1)
+
+        ###############
+
+        self.__feature_extraction_filter_node = self.__flow_chart.createNode(
+            FeatureExtractionFilterNode.get_node_name(),
+            pos=(300, -75))
 
         self.__flow_chart.connectTerminals(self.__buffer_node_x[NodeInputOutputType.DATA_OUT.value],
                                            self.__feature_extraction_filter_node[NodeInputOutputType.ACCEL_X.value])
@@ -89,9 +109,21 @@ class MainWindow(QtWidgets.QWidget):
         self.__flow_chart.connectTerminals(self.__buffer_node_z[NodeInputOutputType.DATA_OUT.value],
                                            self.__feature_extraction_filter_node[NodeInputOutputType.ACCEL_Z.value])
 
+        # time signal connection
+        self.__flow_chart.connectTerminals(
+            # TODO which values for time signal
+            self.__feature_extraction_filter_node[NodeInputOutputType.FREQUENCY_SPECTROGRAM.value],
+            plot_time_signal_node["In"]
+        )
+
+        # spectrogram connection
+        self.__flow_chart.connectTerminals(
+            self.__feature_extraction_filter_node[NodeInputOutputType.FREQUENCY_SPECTROGRAM.value],
+            plot_spectrogram_node["In"]
+        )
+
     def __setup_gesture(self):
-        self.__gesture_node = self.__flow_chart.createNode(NodeType.GESTURE.value,
-                                                                        pos=(300, 50))
+        self.__gesture_node = self.__flow_chart.createNode(GestureNode.get_node_name(), pos=(300, 50))
 
         # TODO output
         #  self.__flow_chart.connectTerminals(self.__feature_extraction_filter_node["FREQUENCY_SPECTROGRAM"],
@@ -100,8 +132,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def __setup_display_text(self):
         # TODO + pos
-        self.__display_text_node = self.__flow_chart.createNode(NodeType.DISPLAY_TEXT.value,
-                                                                        pos=(300, 100))
+        self.__display_text_node = self.__flow_chart.createNode(DisplayTextNode.get_node_name(), pos=(300, 100))
         pass
 
 
