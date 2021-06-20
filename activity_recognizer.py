@@ -192,7 +192,7 @@ class MainWindow(QtWidgets.QWidget):
         #                                    self.__display_text_node[NodeKey.PREDICTED_CATEGORY.value])
 
         self.__flow_chart.connectTerminals(self.__feature_extraction_filter_node[NodeKey.FFT.value],
-                                           self.__display_text_node[NodeKey.PREDICTED_CATEGORY.value])
+                                           self.__display_text_node[NodeKey.PREDICTED_GESTURE.value])
 
 
 def start_program():

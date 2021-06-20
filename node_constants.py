@@ -13,5 +13,5 @@ class NodeKey(Enum):  # TODO in corresponding class
     SPECTROGRAM_Z = "spectrogram_z"
     FFT = "fft"
     DISPLAY_TEXT = "displayText"
-    SAMPLE = "sample"
-    PREDICTED_CATEGORY = "category"
+    GESTURE_DATA = "sample"
+    PREDICTED_GESTURE = "predictedGesture"

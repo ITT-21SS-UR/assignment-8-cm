@@ -18,7 +18,7 @@ class DisplayTextNode(Node):
 
     def __init__(self, name):
         terminals = {
-            NodeKey.PREDICTED_CATEGORY.value: dict(io="in")
+            NodeKey.PREDICTED_GESTURE.value: dict(io="in")
         }
 
         self.__display_text_widget = DisplayTextWidget()
@@ -49,7 +49,7 @@ class DisplayTextWidget(QtWidgets.QWidget):
 
         # TODO current state
         self.__category_info = QtWidgets.QLabel()
-        self.__category_info.setText("predicted category:")
+        self.__category_info.setText("predicted gesture:")
         layout.addWidget(self.__category_info)
 
         self.__predicted_category = QtWidgets.QLabel()
