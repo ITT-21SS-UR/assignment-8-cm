@@ -2,9 +2,11 @@ import numpy as np
 import pyqtgraph.flowchart.library as fclib
 from pyqtgraph.flowchart import Node
 
-from node_constants import NodeInputOutputType
+from node_constants import NodeKey
 
 
+# Author: Claudia
+# Reviewer: Martina
 class FeatureExtractionFilterNode(Node):
     nodeName = "FeatureExtractionFilter"
 
@@ -14,10 +16,14 @@ class FeatureExtractionFilterNode(Node):
 
     def __init__(self, name):
         terminals = {
-            NodeInputOutputType.ACCEL_X.value: dict(io="in"),
-            NodeInputOutputType.ACCEL_Y.value: dict(io="in"),
-            NodeInputOutputType.ACCEL_Z.value: dict(io="in"),
-            NodeInputOutputType.FREQUENCY_SPECTROGRAM.value: dict(io="out")
+            NodeKey.ACCEL_X.value: dict(io="in"),
+            NodeKey.ACCEL_Y.value: dict(io="in"),
+            NodeKey.ACCEL_Z.value: dict(io="in"),
+            # decided to show signal because it was also shown in the course
+            NodeKey.TIME_SIGNAL_X.value: dict(io="out"),
+            NodeKey.SPECTROGRAM_X.value: dict(io="out"),
+            NodeKey.FFT.value: dict(io="out")  # TODO only for testing?
+            # TODO getter instead of enum
         }
 
         Node.__init__(self, name, terminals=terminals)
@@ -44,52 +50,19 @@ class FeatureExtractionFilterNode(Node):
     #  xlabel('Frequency (Hz)')
     #  ylabel('Intensity')
 
-    def __calculate_frequency(self):
-        # TODO calculate frequency
-        return 5
-
     def process(self, **kwargs):
         fft_x = np.fft.fft(kwargs[self.ACCEL_X])
         fft_y = np.fft.fft(kwargs[self.ACCEL_Y])
         fft_z = np.fft.fft(kwargs[self.ACCEL_Z])
 
-        #  normal_x = -kwargs["accelX"][0]
-        #         normal_y = kwargs["accelZ"][0]
-        #
-        #         self.__rotation_vectors = np.array(((0, 0), (normal_x, normal_y)))
-        #
-        #         return {"rotation": self.__rotation_vectors}
+        # TODO only for testing
+        time_signal = np.array(kwargs[self.ACCEL_X][0])
 
-        print("s")
+        fft = np.array(np.array((fft_x, fft_y, fft_z)))
 
-        # x should be the calculated frequency and y the amplitude or intensity?
-        return {NodeInputOutputType.FREQUENCY_SPECTROGRAM.value: np.array([fft_x, fft_y, fft_z])}
+        return {NodeKey.TIME_SIGNAL_X.value: time_signal,
+                NodeKey.SPECTROGRAM_X.value: fft_x,
+                NodeKey.FFT.value: fft}
 
 
 fclib.registerNodeType(FeatureExtractionFilterNode, [(FeatureExtractionFilterNode.get_node_name(),)])
-
-
-class DisplayTextNode(Node):  # TODO move to separate file
-    nodeName = "DisplayText"
-
-    @staticmethod
-    def get_node_name():
-        return DisplayTextNode.nodeName
-
-    def __init__(self, name):
-        terminals = {
-            # TODO
-            NodeInputOutputType.SAMPLE.value: dict(io="in"),
-            NodeInputOutputType.PREDICTED_CATEGORY.value: dict(io="out")
-        }
-
-        # TODO UI
-
-        Node.__init__(self, name, terminals=terminals)
-
-    def process(self, **kwargs):
-        # TODO
-        pass
-
-
-fclib.registerNodeType(DisplayTextNode, [(DisplayTextNode.get_node_name(),)])
