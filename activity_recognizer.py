@@ -19,7 +19,7 @@ The workload was distributed evenly and tasks were discussed together.
 
 Errors like this are shown in the console that should be ignored. 
 qt.qpa.xcb: QXcbConnection: XCB error: 3 (BadWindow), sequence: 973, resource id: 24177709, major code: 40 (TranslateCoords), minor code: 0
-This is a known bug that sometimes occur when a dialog is closed (often happens when print is used).
+This is a known bug that sometimes occurs when a dialog is closed (often happens when print is used).
 https://bugreports.qt.io/browse/QTBUG-56893
 """
 
@@ -79,120 +79,77 @@ class MainWindow(QtWidgets.QWidget):
         self.__flow_chart.connectTerminals(self.__dippid_node[NodeKey.ACCEL_Z.value],
                                            self.__buffer_node_z[NodeKey.DATA_IN.value])
 
-    def __test_y_plot(self):
-        # TODO remove after working spectrogram
+    def __setup_feature_extraction_filter(self):
+        self.__feature_extraction_filter_node = self.__flow_chart.createNode(
+            FeatureExtractionFilterNode.get_node_name(),
+            pos=(150, -75))
+
+        self.__flow_chart.connectTerminals(self.__buffer_node_x[NodeKey.DATA_OUT.value],
+                                           self.__feature_extraction_filter_node[NodeKey.ACCEL_X.value])
+        self.__flow_chart.connectTerminals(self.__buffer_node_y[NodeKey.DATA_OUT.value],
+                                           self.__feature_extraction_filter_node[NodeKey.ACCEL_Y.value])
+        self.__flow_chart.connectTerminals(self.__buffer_node_z[NodeKey.DATA_OUT.value],
+                                           self.__feature_extraction_filter_node[NodeKey.ACCEL_Z.value])
+
+        # TODO which plots
+        self.__setup_time_signal_x()
+        self.__setup_spectrogram_x()
+        # self.__setup_spectrogram_y()
+        # self.__setup_spectrogram_z()
+
+    def __setup_time_signal_x(self):
+        # signal: x "Time [sec]", y "Amplitude"
+        # TODO separate functions  self.__setup_spectrogram_x()
+        # TODO plot for time signal?
         plot_time_signal = pg.PlotWidget()
-        plot_time_signal.setTitle("test y accel")
-        plot_time_signal.setYRange(-2, 2)
-        self.__layout.addWidget(plot_time_signal, 1, 1)
+        plot_time_signal.setTitle("time signal/accel x")
+        plot_time_signal.setYRange(-4, 4)
+        self.__layout.addWidget(plot_time_signal, 0, 1)
 
         plot_time_signal_node = self.__flow_chart.createNode("PlotWidget", pos=(300, -100))
         plot_time_signal_node.setPlot(plot_time_signal)
 
         self.__flow_chart.connectTerminals(
-            self.__buffer_node_y[NodeKey.DATA_OUT.value],
+            self.__feature_extraction_filter_node[NodeKey.TIME_SIGNAL_X.value],
             plot_time_signal_node["In"]
         )
 
-    def __setup_feature_extraction_filter(self):
-        # TODO separate functions  self.__setup_spectrogram_x()
-        # TODO plot for time signal?
-        # plot_time_signal = pg.PlotWidget()
-        # plot_time_signal.setTitle("time signal/accel x")
-        # plot_time_signal.setYRange(-4, 4)
-        # self.__layout.addWidget(plot_time_signal, 0, 1)
-        #
-        # plot_time_signal_node = self.__flow_chart.createNode("PlotWidget", pos=(300, -100))
-        # plot_time_signal_node.setPlot(plot_time_signal)
-
-        # TODO show spectrogram_x
+    def __setup_spectrogram_x(self):
+        # TODO spectrogram for x
+        # axes: fft: x "Frequency [Hz]", y "Intensity"
         plot_spectrogram_x = pg.PlotWidget()
         plot_spectrogram_x.setTitle("spectrogram x")
         plot_spectrogram_x.setYRange(-4, 4)  # TODO range
-        self.__layout.addWidget(plot_spectrogram_x, 0, 1)
-        # what are the axis "Frequency [Hz]" "Time [sec]" "Amplitude" "Intensity"
+        # plot_spectrogram_x.enableAutoRange('xy', False)
+        self.__layout.addWidget(plot_spectrogram_x, 1, 1)
 
         plot_spectrogram_node_x = self.__flow_chart.createNode("PlotWidget", pos=(300, -50))
         plot_spectrogram_node_x.setPlot(plot_spectrogram_x)
 
-        self.__feature_extraction_filter_node = self.__flow_chart.createNode(
-            FeatureExtractionFilterNode.get_node_name(),
-            pos=(150, -75))
-
-        # buffer node usage is slower than directly using the dippid node
-        # TODO move to coressponding spectrogram function
-        self.__flow_chart.connectTerminals(self.__buffer_node_x[NodeKey.DATA_OUT.value],
-                                           # self.__dippid_node["accelX"],
-                                           # self.__feature_extraction_filter_node["accelX"])
-                                           self.__feature_extraction_filter_node[NodeKey.ACCEL_X.value])
-        self.__flow_chart.connectTerminals(self.__buffer_node_y[NodeKey.DATA_OUT.value],
-                                           # self.__dippid_node["accelY"],
-                                           self.__feature_extraction_filter_node[NodeKey.ACCEL_Y.value])
-        self.__flow_chart.connectTerminals(self.__buffer_node_z[NodeKey.DATA_OUT.value],
-                                           # self.__dippid_node["accelZ"],
-                                           self.__feature_extraction_filter_node[NodeKey.ACCEL_Z.value])
-
-        # TODO remove this connection
-        self.__test_y_plot()
-
-        # TODO time signal connection
-        # self.__flow_chart.connectTerminals(
-        #     self.__feature_extraction_filter_node[NodeKey.TIME_SIGNAL_X.value],
-        #     plot_time_signal_node["In"]
-        # )
-
-        # TODO NodeKey.FFT.value at certain position
-
-        # TODO spectrogram_x connection
         self.__flow_chart.connectTerminals(
             self.__feature_extraction_filter_node[NodeKey.SPECTROGRAM_X.value],
             plot_spectrogram_node_x["In"]
         )
 
     def __setup_spectrogram_y(self):
-        plot_spectrogram_y = pg.PlotWidget()
-        plot_spectrogram_y.setTitle("spectrogram y")
-        plot_spectrogram_y.setYRange(-2, 2)
-
-        plot_spectrogram_node_y = self.__flow_chart.createNode("PlotWidget", pos=(300, -100))
-        plot_spectrogram_node_y.setPlot(plot_spectrogram_y)
-        self.__layout.addWidget(plot_spectrogram_y, 2, 1)
-
-        self.spectrogram_node_y = self.__flow_chart.createNode(
-            FeatureExtractionFilterNode.get_node_name(),
-            pos=(150, -75))
-
-        self.__flow_chart.connectTerminals(
-            # self.__dippid_node[NodeInputOutputType.ACCEL_Y.value], # this is not working
-            self.__buffer_node_y[NodeKey.DATA_OUT.value],
-            plot_spectrogram_node_y["In"]
-        )
-
-    def __setup_spectrogram_x(self):
-        # TODO spectrogram for x
+        # TODO spectrogram for y?
         pass
 
     def __setup_spectrogram_z(self):
-        # TODO spectrogram for z
+        # TODO spectrogram for z?
         pass
 
     def __setup_gesture(self):
-        self.__gesture_node = self.__flow_chart.createNode(GestureNode.get_node_name(), pos=(150, 50))
-
-        # TODO output
-        #  self.__flow_chart.connectTerminals(self.__feature_extraction_filter_node["FREQUENCY_SPECTROGRAM"],
-        #                                   self.__activity_recognition_node[
-        #                                       NodeInputOutputType.sample.value])
-
-    def __setup_display_text(self):
-        self.__display_text_node = self.__flow_chart.createNode(DisplayTextNode.get_node_name(), pos=(150, 100))
-
-        # TODO get predicted category text
-        # self.__flow_chart.connectTerminals(self.__buffer_node_y[NodeKey.DATA_OUT.value],
-        #                                    self.__display_text_node[NodeKey.PREDICTED_CATEGORY.value])
+        self.__gesture_node = self.__flow_chart.createNode(GestureNode.get_node_name(), pos=(200, 50))
 
         self.__flow_chart.connectTerminals(self.__feature_extraction_filter_node[NodeKey.FFT.value],
-                                           self.__display_text_node[NodeKey.PREDICTED_GESTURE.value])
+                                           self.__gesture_node[NodeKey.GESTURE_DATA.value])
+
+    def __setup_display_text(self):
+        self.__display_text_node = self.__flow_chart.createNode(DisplayTextNode.get_node_name(), pos=(300, 100))
+
+        self.__flow_chart.connectTerminals(self.__gesture_node[NodeKey.PREDICTED_GESTURE.value],
+                                           self.__display_text_node[NodeKey.TEXT.value])
 
 
 def start_program():

@@ -18,7 +18,7 @@ class DisplayTextNode(Node):
 
     def __init__(self, name):
         terminals = {
-            NodeKey.PREDICTED_GESTURE.value: dict(io="in")
+            NodeKey.TEXT.value: dict(io="in")
         }
 
         self.__display_text_widget = DisplayTextWidget()
@@ -26,11 +26,10 @@ class DisplayTextNode(Node):
         Node.__init__(self, name, terminals=terminals)
 
     def process(self, **kwargs):
-        # TODO change label text of predicted category in real time
-        # predicted_category = kwargs[NodeKey.PREDICTED_CATEGORY.value][0]
-        # print(predicted_category)
-        # self.__display_text_widget.set_predicted_category_text(predicted_category)
-        self.__display_text_widget.set_predicted_category_text("TODO")
+        text = kwargs[NodeKey.PREDICTED_CATEGORY.value]
+
+        if text:
+            self.__display_text_widget.set_predicted_category_text(text)
 
     def ctrlWidget(self):
         return self.__display_text_widget
@@ -47,7 +46,6 @@ class DisplayTextWidget(QtWidgets.QWidget):
     def __setup_layout(self):
         layout = QtWidgets.QVBoxLayout()
 
-        # TODO current state
         self.__category_info = QtWidgets.QLabel()
         self.__category_info.setText("predicted gesture:")
         layout.addWidget(self.__category_info)

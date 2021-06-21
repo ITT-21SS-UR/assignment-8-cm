@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class NodeKey(Enum):  # TODO in corresponding class
+class NodeKey(Enum):
     DATA_IN = "dataIn"
     DATA_OUT = "dataOut"
     ACCEL_X = "accelX"
@@ -13,5 +13,6 @@ class NodeKey(Enum):  # TODO in corresponding class
     SPECTROGRAM_Z = "spectrogram_z"
     FFT = "fft"
     DISPLAY_TEXT = "displayText"
-    GESTURE_DATA = "sample"
-    PREDICTED_GESTURE = "predictedGesture"
+    GESTURE_DATA = "data"
+    TEXT = "text"
+    PREDICTED_GESTURE = "name"

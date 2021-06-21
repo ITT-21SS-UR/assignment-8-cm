@@ -1,9 +1,11 @@
 from enum import Enum
 
+import numpy as np
 import pyqtgraph.flowchart.library as fclib
 from PyQt5.QtCore import pyqtSignal, QObject
 from pyqtgraph.Qt import QtWidgets
 from pyqtgraph.flowchart import Node
+from scipy.fft import fft
 from sklearn import svm
 
 from node_constants import NodeKey
@@ -43,6 +45,10 @@ class GestureNode(Node):
         elif gesture_state == GestureNodeState.PREDICTION:
             gesture_model.predict_gesture(kwargs)
 
+        # TODO return output as the latest predicted gesture
+        #  or message that user should switch to prediction state to get the prediction results
+        return {NodeKey.PREDICTED_GESTURE.value: "TODO"}
+
     def ctrlWidget(self):
         return self.__gesture_node_widget
 
@@ -57,6 +63,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
         self.__gesture_model = GestureNodeModel()
         self.__setup_layout()
+        self.__gesture_model.setup_pretrained_gestures()
 
     def __setup_layout(self):
         self.__layout = QtWidgets.QVBoxLayout()
@@ -67,9 +74,11 @@ class GestureNodeWidget(QtWidgets.QWidget):
         self.__setup_training_button()
         self.__setup_gesture_list()
 
+        # was added here because the training button should appear after the info text
+        # so that no error occurs when the training button is hidden/shown
         self.__handle_state_changed(self.__gesture_model.get_gesture_state())
-        self.__connect_signals()
 
+        self.__connect_signals()
         self.setLayout(self.__layout)
 
     def __setup_gesture_state_selection_layout(self):
@@ -122,18 +131,25 @@ class GestureNodeWidget(QtWidgets.QWidget):
         self.__layout.addWidget(self.__info_text)
 
     def __handle_state_changed(self, state):
-        # TODO stop current training when is being trained
+        self.__handle_stop_training()
+
         if state == GestureNodeState.TRAINING:
             self.__info_text.setText("To train your gesture click \"Begin Training\".\n"
                                      "Click on \"Training...\" to stop the training.")
             self.__training_button.show()
+
         elif state == GestureNodeState.PREDICTION:
             # TODO check how many trained gestures are available and change text accordingly
             self.__info_text.setText("Predicted gesture is shown in DisplayText.")
             self.__training_button.hide()
+
         elif state == GestureNodeState.INACTIVE:
             self.__info_text.setText("Select another state to train or predict a gesture.")
             self.__training_button.hide()
+
+    def __handle_stop_training(self):
+        self.__training_button.setText("Begin Training")
+        self.__gesture_model.stop_training()
 
     def __setup_training_button(self):
         self.__training_button = QtWidgets.QPushButton()
@@ -143,13 +159,14 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
     def __training_button_clicked(self):
         if self.__gesture_model.is_training():
-            self.__training_button.setText("Begin Training")
-            self.__gesture_model.stop_training()
+            self.__handle_stop_training()
         else:
-            self.__training_button.setText("Training...")
-            self.__gesture_model.collect_training_data()
+            if self.__gesture_model.is_gestures_empty():
+                self.__show_no_gesture_item_selected()
+                return
 
-        self.__gesture_model.reverse_is_training()
+            self.__training_button.setText("Training...")
+            self.__gesture_model.set_is_training(True)
 
     def __setup_add_gesture(self):
         self.__add_gesture_button = QtWidgets.QPushButton("Add gesture")
@@ -157,6 +174,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
         self.__gesture_button_layout.addWidget(self.__add_gesture_button)
 
     def __add_gesture_button_clicked(self):
+        self.__handle_stop_training()
         gesture_name, ok = QtWidgets.QInputDialog.getText(self, "Add new gesture", "gesture name")
 
         if gesture_name:
@@ -178,11 +196,13 @@ class GestureNodeWidget(QtWidgets.QWidget):
         self.__gesture_button_layout.addWidget(self.__retrain_gesture_button)
 
     def __retrain_gesture_button_clicked(self):
+        self.__handle_stop_training()
+
         if not self.__is_gesture_item_selected():
             self.__show_no_gesture_item_selected()
             return
 
-        self.__show_gesture_confirm_retrain()
+        self.__show_gesture_accept_retrain()
 
     def __setup_remove_gesture(self):
         self.__remove_gesture_button = QtWidgets.QPushButton("Remove gesture")
@@ -190,11 +210,13 @@ class GestureNodeWidget(QtWidgets.QWidget):
         self.__gesture_button_layout.addWidget(self.__remove_gesture_button)
 
     def __remove_gesture_button_clicked(self):
+        self.__handle_stop_training()
+
         if not self.__is_gesture_item_selected():
             self.__show_no_gesture_item_selected()
             return
 
-        self.__show_gesture_confirm_removal()
+        self.__show_gesture_accept_removal()
 
     def __setup_gesture_list(self):
         gesture_label = QtWidgets.QLabel()
@@ -202,23 +224,41 @@ class GestureNodeWidget(QtWidgets.QWidget):
         self.__layout.addWidget(gesture_label)
 
         self.__gesture_list = QtWidgets.QListWidget()
+        self.__gesture_list.itemSelectionChanged.connect(self.__selected_gesture_changed)
         self.__layout.addWidget(self.__gesture_list)
 
+    def __selected_gesture_changed(self):
+        self.__handle_stop_training()
+
+        if self.__gesture_model.is_gestures_empty():
+            return
+
+        self.__gesture_model.set_selected_gesture_name(self.__gesture_list.currentItem().text())
+
     def __connect_signals(self):
-        self.__gesture_model.gesture_name_exists.connect(self.__show_gesture_name_exits)
+        self.__gesture_model.gesture_name_exists.connect(self.__show_gesture_name_exists)
+        self.__gesture_model.pretrained_gestures_added.connect(self.__handle_pretrained_gestures_added)
         self.__gesture_model.gesture_item_added.connect(self.__add_gesture_item)
         self.__gesture_model.state_changed.connect(self.__handle_state_changed)
+
+    def __handle_pretrained_gestures_added(self, gesture_names):
+        for name in gesture_names:
+            self.__add_gesture_item(name)
+
+        # TODO deselection relevant for pretrained gestures?
+        # self.__gesture_list.currentItem().setSelected(False)
+        # self.__gesture_model.set_selected_gesture_name(None)
 
     def __add_gesture_item(self, gesture_name: str):
         gesture_item = QtWidgets.QListWidgetItem(gesture_name)
         self.__gesture_list.addItem(gesture_item)
         self.__gesture_list.setCurrentItem(gesture_item)
 
-    def __show_gesture_name_exits(self, gesture_name: str):
+    def __show_gesture_name_exists(self, gesture_name: str):
         QtWidgets.QMessageBox.warning(self, "Gesture exists",
                                       "Gesture \"{}\" already exists. (-_-)".format(gesture_name))
 
-    def __show_gesture_confirm_removal(self):
+    def __show_gesture_accept_removal(self):
         gesture_name = self.__gesture_list.currentItem().text()
 
         remove_reply = QtWidgets.QMessageBox.question(self, "Remove gesture", "Are you sure to remove gesture \"{}\".\n"
@@ -229,7 +269,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
             self.__gesture_model.remove_gesture(gesture_name)
             self.__gesture_list.takeItem(self.__gesture_list.currentRow())
 
-    def __show_gesture_confirm_retrain(self):
+    def __show_gesture_accept_retrain(self):
         gesture_name = self.__gesture_list.currentItem().text()
 
         retrain_reply = QtWidgets.QMessageBox.question(self, "Retrain gesture",
@@ -253,14 +293,25 @@ class GestureNodeModel(QObject):
     state_changed = pyqtSignal([GestureNodeState])
     gesture_name_exists = pyqtSignal([str])
     gesture_item_added = pyqtSignal([str])
+    pretrained_gestures_added = pyqtSignal([list])  # TODO pretrained gestures
 
     def __init__(self):
         super().__init__()
         self.__gestures = []
+        self.__selected_gesture_name = None
         self.__classifier = svm.SVC()  # TODO which type?
-        self.__setup_pretrained_gestures()
         self.__gesture_state = GestureNodeState.INACTIVE
         self.__is_training = False
+
+    def __exists_gesture_name(self, gesture_name: str):
+        for gesture in self.__gestures:
+            if gesture[self.GESTURE_NAME] == gesture_name:
+                return True
+
+        return False
+
+    def __find_gesture_by_name(self, gesture_name):
+        return next((gesture for gesture in self.__gestures if gesture[self.GESTURE_NAME] == gesture_name), None)
 
     @staticmethod
     def __read_data(file_name):
@@ -280,9 +331,9 @@ class GestureNodeModel(QObject):
 
         return avg
 
-    def __setup_pretrained_gestures(self):
-        # source slightly modified: Wiimote - FFT - SVM.ipynb
-        # TODO setup pretrained gestures: use csv hop stand walk from data folder
+    def setup_pretrained_gestures(self):
+        # Wiimote - FFT - SVM.ipynb
+        # TODO setup pretrained gestures
         stand_csv = ["./data/stand_1.csv", "./data/stand_2.csv", "./data/stand_3.csv", "./data/stand_4.csv"]
         walk_csv = ["./data/walk_1.csv", "./data/walk_2.csv", "./data/walk_3.csv", "./data/walk_4.csv"]
         hop_csv = ["./data/hop1.csv", "./data/hop2.csv", "./data/hop3.csv", "./data/hop4.csv"]
@@ -291,20 +342,47 @@ class GestureNodeModel(QObject):
         walk_raw = [GestureNodeModel.__read_data(f) for f in walk_csv]
         hop_raw = [GestureNodeModel.__read_data(f) for f in hop_csv]
 
-        # print(stand_raw)
+        all = stand_raw + walk_raw + hop_raw
+        minlen = min([len(x) for x in all])
+        # print("Cutting off after", minlen, "samples")
+        stand_cut = [l[:minlen] for l in stand_raw]
+        walk_cut = [l[:minlen] for l in walk_raw]
+        hop_cut = [l[:minlen] for l in hop_raw]
 
+        # print(stand_cut[0])
+        # print(stand_raw)
         # samples = list(zip(x, y, z)) # for each csv column map them to a tuple with (x,y,z)
         # self.__gestures = # TODO set pretrained gestures
 
-    def __exists_gesture_name(self, gesture_name: str):
+        stand_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in stand_cut]
+        walk_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in walk_cut]
+        hop_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in hop_cut]
+
+        c = svm.SVC()
+        STAND = 0
+        WALK = 1
+        HOP = 2
+        categories = [STAND] * 3 + [WALK] * 3 + [HOP] * 3
+        training_data = stand_freq[1:] + walk_freq[1:] + hop_freq[1:]
+        c.fit(training_data, categories)
+        c.predict([stand_freq[0], walk_freq[0], hop_freq[0]])
+
+        ###########################
+        # TODO use correct gesture_data
+        self.__gestures.append({self.GESTURE_NAME: "stand",
+                                self.GESTURE_DATA: []})
+        self.__gestures.append({self.GESTURE_NAME: "walk",
+                                self.GESTURE_DATA: []})
+        self.__gestures.append({self.GESTURE_NAME: "hop",
+                                self.GESTURE_DATA: []})
+
+        gesture_names = []
         for gesture in self.__gestures:
-            if gesture[self.GESTURE_NAME] == gesture_name:
-                return True
+            gesture_names.append(gesture[self.GESTURE_NAME])
 
-        return False
+        self.pretrained_gestures_added.emit(gesture_names)
 
-    def __find_gesture_by_name(self, gesture_name):
-        return next((gesture for gesture in self.__gestures if gesture[self.GESTURE_NAME] == gesture_name), None)
+        print(self.__gestures)
 
     def add_gesture(self, gesture_name: str):
         if self.__exists_gesture_name(gesture_name):
@@ -329,6 +407,12 @@ class GestureNodeModel(QObject):
     def remove_gesture(self, gesture_name: str):
         self.__gestures = [gesture for gesture in self.__gestures if not (gesture[self.GESTURE_NAME] == gesture_name)]
 
+        if self.is_gestures_empty():
+            self.__selected_gesture_name = None
+
+    def is_gestures_empty(self):
+        return not self.__gestures
+
     def get_gesture_state(self):
         return self.__gesture_state
 
@@ -336,39 +420,34 @@ class GestureNodeModel(QObject):
         self.__gesture_state = state
         self.state_changed.emit(state)
 
+    def set_selected_gesture_name(self, gesture_name):
+        self.__selected_gesture_name = gesture_name
+
     def train_gesture(self, gesture_input):
-        # TODO train gesture
-        # TODO get selected item
+        # TODO collect training gesture data
         if not self.__is_training:
             return
 
-        # selected_gesture = self.__find_gesture_by_name(gesture_name)
+        selected_gesture = self.__find_gesture_by_name(self.__selected_gesture_name)
+        selected_gesture[self.GESTURE_DATA].append(gesture_input)
+        print("selected gesture")
         # print(selected_gesture)
         # Add gesture_data to current selected_gesture
 
-        # Push button
-        # Begin training
-        # Stop training
-
-        pass
-
     def retrain_gesture(self, gesture_name: str):
         gesture = self.__find_gesture_by_name(gesture_name)
-        gesture[self.GESTURE_DATA] = []
+        gesture[self.GESTURE_DATA] = []  # clear gesture data
 
     def is_training(self):
         return self.__is_training
 
-    def reverse_is_training(self):
-        self.__is_training = not self.__is_training
+    def set_is_training(self, is_training):
+        self.__is_training = is_training
 
     def stop_training(self):
-        print("stop training")
+        if self.__is_training:
+            print("stop training")
+            # TODO stop collecting data and train the model a new with fit
+            #  classifier.fit(samples, c1)
 
-    def collect_training_data(self):
-        print("start training")
-
-
-class GestureItemData:
-    # TODO GestureItemData needed?
-    pass
+        self.set_is_training(False)
