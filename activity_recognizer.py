@@ -19,7 +19,7 @@ The workload was distributed evenly and tasks were discussed together.
 
 Errors like this are shown in the console that should be ignored. 
 qt.qpa.xcb: QXcbConnection: XCB error: 3 (BadWindow), sequence: 973, resource id: 24177709, major code: 40 (TranslateCoords), minor code: 0
-This is a known bug that sometimes occurs when a dialog is closed (often happens when print is used).
+This is a known bug that sometimes occurs when e.g. a dialog is closed (often happens when print is used).
 https://bugreports.qt.io/browse/QTBUG-56893
 """
 
@@ -102,8 +102,8 @@ class MainWindow(QtWidgets.QWidget):
         # TODO separate functions  self.__setup_spectrogram_x()
         # TODO plot for time signal?
         plot_time_signal = pg.PlotWidget()
-        plot_time_signal.setTitle("time signal/accel x")
-        plot_time_signal.setYRange(-4, 4)
+        plot_time_signal.setTitle("signal x")
+        plot_time_signal.setYRange(-3, 3)
         self.__layout.addWidget(plot_time_signal, 0, 1)
 
         plot_time_signal_node = self.__flow_chart.createNode("PlotWidget", pos=(300, -100))
@@ -119,8 +119,7 @@ class MainWindow(QtWidgets.QWidget):
         # axes: fft: x "Frequency [Hz]", y "Intensity"
         plot_spectrogram_x = pg.PlotWidget()
         plot_spectrogram_x.setTitle("spectrogram x")
-        plot_spectrogram_x.setYRange(-4, 4)  # TODO range
-        # plot_spectrogram_x.enableAutoRange('xy', False)
+        plot_spectrogram_x.setYRange(0, 2.2)  # TODO range
         self.__layout.addWidget(plot_spectrogram_x, 1, 1)
 
         plot_spectrogram_node_x = self.__flow_chart.createNode("PlotWidget", pos=(300, -50))
@@ -167,8 +166,7 @@ def start_program():
 
 def read_port_number():
     if len(sys.argv) < 2:
-        sys.stderr.write("Please give a port number as argument (￢_￢)\n")
-        # sys.exit(1) # TODO uncomment
+        print("Please give a port number as argument (￢_￢). Port number is set to 5700.")
         return 5700
 
     return sys.argv[1]

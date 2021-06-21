@@ -43,24 +43,25 @@ class FeatureExtractionFilterNode(Node):
     #
     #
     #  Y = fft.fft(y) / n # fft computing and normalization
-    #  Y = Y[0:int(n/2)] # use only first half as the function is mirrored  # das hier braucht man stf
+    #  Y = Y[0:int(n/2)] # use only first half as the function is mirrored  # das hier braucht man?
     #
-    #  plot(frq, abs(Y),'r') # plotting the spectrum  # und das hier laut stf
+    #  plot(frq, abs(Y),'r') # plotting the spectrum  # und das hier?
     #  xlabel('Frequency (Hz)')
     #  ylabel('Intensity')
 
+    def __calculate_frequency(self, values):
+        return [np.abs(np.fft.fft(values) / len(values))[1:len(values) // 2]]
+
     def process(self, **kwargs):
-        fft_x = np.fft.fft(kwargs[NodeKey.ACCEL_X.value])
-        fft_y = np.fft.fft(kwargs[NodeKey.ACCEL_Y.value])
-        fft_z = np.fft.fft(kwargs[NodeKey.ACCEL_Z.value])
-        fft = np.array(np.array((fft_x, fft_y, fft_z)))
+        # FFT, stddev, derivatives
+        # one accel array of buffer has a max size of 32
+        fft_x = self.__calculate_frequency(kwargs[NodeKey.ACCEL_X.value])
+        fft_y = self.__calculate_frequency(kwargs[NodeKey.ACCEL_Y.value])
+        fft_z = self.__calculate_frequency(kwargs[NodeKey.ACCEL_Z.value])
+        fft = np.array([fft_x, fft_y, fft_z])
 
-        # TODO only for testing
-        time_signal = np.array(kwargs[NodeKey.ACCEL_Y.value][0])
-
-        # TODO output gesture node
-        return {NodeKey.TIME_SIGNAL_X.value: time_signal,
-                NodeKey.SPECTROGRAM_X.value: np.array(kwargs[NodeKey.ACCEL_Y.value]),
+        return {NodeKey.TIME_SIGNAL_X.value: np.array(kwargs[NodeKey.ACCEL_X.value]),  # time signal x
+                NodeKey.SPECTROGRAM_X.value: fft_x,  # spectrogram x
                 NodeKey.FFT.value: fft}
 
 

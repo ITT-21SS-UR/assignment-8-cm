@@ -37,9 +37,11 @@ class GestureNode(Node):
         Node.__init__(self, name, terminals=terminals)
 
     def process(self, **kwargs):
+        #
         gesture_model = self.__gesture_node_widget.get_gesture_model()
         gesture_state = gesture_model.get_gesture_state()
 
+        # kwargs is none
         if gesture_state == GestureNodeState.TRAINING:
             gesture_model.train_gesture(kwargs)
         elif gesture_state == GestureNodeState.PREDICTION:
@@ -354,10 +356,12 @@ class GestureNodeModel(QObject):
         # samples = list(zip(x, y, z)) # for each csv column map them to a tuple with (x,y,z)
         # self.__gestures = # TODO set pretrained gestures
 
+        # Preprocessing Raw Data using the FFT
         stand_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in stand_cut]
         walk_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in walk_cut]
         hop_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in hop_cut]
 
+        # Train an SVM classifier
         c = svm.SVC()
         STAND = 0
         WALK = 1
