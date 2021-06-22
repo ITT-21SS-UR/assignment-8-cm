@@ -308,7 +308,6 @@ class GestureNodeModel(QObject):
             kernel="linear")  # TODO which type? ‘linear’, ‘poly’, ‘rbf’ (default), ‘sigmoid’, ‘precomputed’
         self.__gesture_state = GestureNodeState.INACTIVE
         self.__is_training = False
-        self.__id_count = 0
 
     def __exists_gesture_name(self, gesture_name: str):
         for gesture in self.__gestures:
@@ -378,18 +377,15 @@ class GestureNodeModel(QObject):
 
         ###########################
         # TODO use correct gesture_data
-        # TODO function for adding data
         self.__gestures.append({self.GESTURE_NAME: "stand",
                                 self.GESTURE_DATA: [],
-                                self.GESTURE_ID: 0})
+                                self.GESTURE_ID: 1})
         self.__gestures.append({self.GESTURE_NAME: "walk",
                                 self.GESTURE_DATA: [],
-                                self.GESTURE_ID: 1})
+                                self.GESTURE_ID: 2})
         self.__gestures.append({self.GESTURE_NAME: "hop",
                                 self.GESTURE_DATA: [],
-                                self.GESTURE_ID: 2})
-
-        self.__id_count = 3
+                                self.GESTURE_ID: 3})
 
         gesture_names = []
         for gesture in self.__gestures:
@@ -405,9 +401,7 @@ class GestureNodeModel(QObject):
             return
 
         self.__gestures.append({self.GESTURE_NAME: gesture_name,
-                                self.GESTURE_DATA: [],
-                                self.GESTURE_ID: self.__id_count})
-        self.__id_count += 1
+                                self.GESTURE_DATA: []})
 
         self.gesture_item_added.emit(gesture_name)
 
@@ -416,8 +410,6 @@ class GestureNodeModel(QObject):
 
         if self.is_gestures_empty():
             self.__selected_gesture_name = None
-
-        # TODO train model again if not empty
 
     def is_gestures_empty(self):
         return not self.__gestures
@@ -433,12 +425,19 @@ class GestureNodeModel(QObject):
         self.__selected_gesture_name = gesture_name
 
     def collect_training_data(self, gesture_input):
+        # TODO collect training gesture data
         if not self.__is_training:
             return
 
         selected_gesture = self.__find_gesture_by_name(self.__selected_gesture_name)
         selected_gesture[self.GESTURE_DATA].append(
-            gesture_input[NodeKey.GESTURE_DATA.value][0])
+            gesture_input[NodeKey.GESTURE_DATA.value][0])  # use with or without [0]?
+        test = selected_gesture[self.GESTURE_DATA]
+        # print(test)
+        # Reshape your data either using array.reshape(-1, 1) if your data has a single feature or array.reshape(1, -1) if it contains a single sample.
+        # print("selected gesture")
+        # print(selected_gesture)
+        # Add gesture_data to current selected_gesture
 
     def retrain_gesture(self, gesture_name: str):
         gesture = self.__find_gesture_by_name(gesture_name)
@@ -451,35 +450,77 @@ class GestureNodeModel(QObject):
         self.__is_training = is_training
 
     def stop_training(self):
-        # slightly adjusted to our needs -> train(self)
-        # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
         if self.__is_training:
+            print("stop training")
             samples = []
             categories = []
 
-            for gesture in self.__gestures:
-                for data in gesture[self.GESTURE_DATA]:
-                    feature = data[0].flatten()
-                    samples.append(feature)
-                    categories.append(gesture[self.GESTURE_ID])
+            # TODO all gestures have to be retrained with the new one
+            # selected_gesture = self.__find_gesture_by_name(self.__selected_gesture_name)
+            # for data in selected_gesture[self.GESTURE_DATA]:
+            #     print(data)
+            #     feature = data[0].flatten()
+            #     fit_samples.append(feature)
+            #     fit_targets.append(self.__selected_gesture_name)
 
-            if not all(p == categories[0] for p in categories):
-                self.__classifier.fit(samples, categories)
+            #  for key in self.gesture_dict:
+            #             for feature in self.gesture_dict[key][self.FEATURE_DATA]:
+            #                 feature = feature.flatten()
+            #                 fit_samples.append(feature)
+            #                 fit_targets.append(key)
+
+            i = 0
+            for gesture in self.__gestures:
+                print("gesture")
+                gesture_name = gesture[self.GESTURE_NAME]
+                # self.__reference
+                for data in gesture[self.GESTURE_DATA]:
+                    print("data")
+                    print(data)
+                    feature = data[0].flatten()  # with or without [0]?
+                    samples.append(feature)
+                    categories.append(gesture_name)
+
+            # if not all(p == fit_targets[0] for p in fit_targets):
+            # Reshape your data either using array.reshape(-1, 1) if your data has a single feature or array.reshape(1, -1) if it contains a single sample.
+
+            # TODO self.__classifier.fit
+            if not categories:
+                print("no categories")
+
+            self.__classifier.fit(samples, categories)
+            #     raise ValueError(
+            # ValueError: y should be a 1d array, got an array of shape (59, 1, 15) instead.
+            # Exception ignored in: <module 'threading' from '/usr/lib/python3.9/threading.py'>
+
+            # when fit_targets.append(self.__selected_gesture_name)
+            # ValueError: The number of classes has to be greater than one; got 1 class
 
         self.set_is_training(False)
 
     def predict_gesture(self, gesture_input):
-        # slightly adjusted to our needs ->  predict(self, kwargs)
-        # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
-        features = gesture_input[NodeKey.GESTURE_DATA.value][0]
+        # TODO predict_gesture
+        # label predicted gesture:
+        # name of predicted gesture min requirement 1 gesture to start prediction
+        # classifier.fit(samples, c1)  # TODO for training
+        # u_class = classifier.predict([[xu, yu]])
+        # print(u_class)
+
+        features = gesture_input[self.GESTURE_DATA]
+        # features = features.flatten()
+
+        # if len(features) == 51:  # TODO find out where this arbitrary number comes from and insert something that makes sense
         try:
-            prediction = self.__classifier.predict(features)
+            prediction = self.__classifier.predict([features])
         except NotFittedError:
-            return "error while predicting"
+            return
 
-        for gesture in self.__gestures:
-            if gesture[self.GESTURE_ID] == prediction[0]:
-                print(gesture[self.GESTURE_NAME])  # TODO remove print
-                return gesture[self.GESTURE_NAME]
+        #  for ref in self.reference:
+        #                 if self.reference[ref] == prediction[0]:
+        #                     self.predict = ref
 
-        return "- no gesture detected -"
+        # for key in self.gesture_dict:
+        #     if key == prediction[0]:
+        #         return {NodeKey.PREDICTED_GESTURE: key}  # self.__gestures[self.GESTURE_NAME]}
+
+        return "TODO predicted gesture"  # {NodeKey.PREDICTED_GESTURE: "gesture test"}
