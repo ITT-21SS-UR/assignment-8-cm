@@ -451,7 +451,7 @@ class GestureNodeModel(QObject):
         self.__is_training = is_training
 
     def stop_training(self):
-        # slightly adjusted to our needs -> train(self)
+        # adjusted to our needs -> train(self)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
         if self.__is_training:
             samples = []
@@ -469,7 +469,7 @@ class GestureNodeModel(QObject):
         self.set_is_training(False)
 
     def predict_gesture(self, gesture_input):
-        # slightly adjusted to our needs ->  predict(self, kwargs)
+        # adjusted to our needs ->  predict(self, kwargs)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
         features = gesture_input[NodeKey.GESTURE_DATA.value][0]
         try:
