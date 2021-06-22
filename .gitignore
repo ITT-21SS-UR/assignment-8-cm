@@ -7,4 +7,5 @@ __pycache__/
 analyze.py
 custom_nodes2.py
 notes.txt
+fft_buffer.py
 gesture_node2.ui

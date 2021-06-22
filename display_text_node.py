@@ -26,7 +26,7 @@ class DisplayTextNode(Node):
         Node.__init__(self, name, terminals=terminals)
 
     def process(self, **kwargs):
-        text = kwargs[NodeKey.PREDICTED_CATEGORY.value]
+        text = kwargs[NodeKey.TEXT.value]
 
         if text:
             self.__display_text_widget.set_predicted_category_text(text)
@@ -48,10 +48,11 @@ class DisplayTextWidget(QtWidgets.QWidget):
 
         self.__category_info = QtWidgets.QLabel()
         self.__category_info.setText("predicted gesture:")
+        self.__category_info.setWordWrap(True)
         layout.addWidget(self.__category_info)
 
         self.__predicted_category = QtWidgets.QLabel()
-        self.__predicted_category.setText("- no gesture detected -")
+        self.__predicted_category.setText("invalid state")
         layout.addWidget(self.__predicted_category)
 
         self.setLayout(layout)

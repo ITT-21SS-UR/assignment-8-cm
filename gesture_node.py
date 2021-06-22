@@ -41,14 +41,14 @@ class GestureNode(Node):
         gesture_model = self.__gesture_node_widget.get_gesture_model()
         gesture_state = gesture_model.get_gesture_state()
 
+        gesture_output = "To recognize gestures switch to prediction state."
+
         if gesture_state == GestureNodeState.TRAINING:
             gesture_model.collect_training_data(kwargs)
         elif gesture_state == GestureNodeState.PREDICTION:
-            predicted_gesture = gesture_model.predict_gesture(kwargs)
+            gesture_output = gesture_model.predict_gesture(kwargs)
 
-        # TODO return output as the latest predicted gesture
-        #  or message that user should switch to prediction state to get the prediction results
-        return {NodeKey.PREDICTED_GESTURE.value: predicted_gesture}  # "TODO"}
+        return {NodeKey.PREDICTED_GESTURE.value: gesture_output}
 
     def ctrlWidget(self):
         return self.__gesture_node_widget
@@ -153,7 +153,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
     def __handle_stop_training(self):
         self.__training_button.setText(self.BEGIN_TRAINING_TEXT)
-        self.__gesture_model.stop_training()
+        self.__gesture_model.train_gesture()
 
     def __setup_training_button(self):
         self.__training_button = QtWidgets.QPushButton()
@@ -249,10 +249,6 @@ class GestureNodeWidget(QtWidgets.QWidget):
         for name in gesture_names:
             self.__add_gesture_item(name)
 
-        # TODO deselection relevant for pretrained gestures?
-        # self.__gesture_list.currentItem().setSelected(False)
-        # self.__gesture_model.set_selected_gesture_name(None)
-
     def __add_gesture_item(self, gesture_name: str):
         gesture_item = QtWidgets.QListWidgetItem(gesture_name)
         self.__gesture_list.addItem(gesture_item)
@@ -303,12 +299,11 @@ class GestureNodeModel(QObject):
     def __init__(self):
         super().__init__()
         self.__gestures = []
-        self.__selected_gesture_name = None
-        self.__classifier = svm.SVC(
-            kernel="linear")  # TODO which type? ‘linear’, ‘poly’, ‘rbf’ (default), ‘sigmoid’, ‘precomputed’
+        self.__id_count = 0
         self.__gesture_state = GestureNodeState.INACTIVE
         self.__is_training = False
-        self.__id_count = 0
+        self.__selected_gesture_name = None
+        self.__classifier = svm.SVC(kernel="linear")
 
     def __exists_gesture_name(self, gesture_name: str):
         for gesture in self.__gestures:
@@ -416,6 +411,8 @@ class GestureNodeModel(QObject):
 
         if self.is_gestures_empty():
             self.__selected_gesture_name = None
+        else:
+            self.train_gesture()
 
         # TODO train model again if not empty
 
@@ -438,7 +435,7 @@ class GestureNodeModel(QObject):
 
         selected_gesture = self.__find_gesture_by_name(self.__selected_gesture_name)
         selected_gesture[self.GESTURE_DATA].append(
-            gesture_input[NodeKey.GESTURE_DATA.value][0])
+            gesture_input[NodeKey.GESTURE_DATA.value])
 
     def retrain_gesture(self, gesture_name: str):
         gesture = self.__find_gesture_by_name(gesture_name)
@@ -450,7 +447,7 @@ class GestureNodeModel(QObject):
     def set_is_training(self, is_training):
         self.__is_training = is_training
 
-    def stop_training(self):
+    def train_gesture(self):
         # adjusted to our needs -> train(self)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
         if self.__is_training:
@@ -471,7 +468,7 @@ class GestureNodeModel(QObject):
     def predict_gesture(self, gesture_input):
         # adjusted to our needs ->  predict(self, kwargs)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
-        features = gesture_input[NodeKey.GESTURE_DATA.value][0]
+        features = gesture_input[NodeKey.GESTURE_DATA.value]
         try:
             prediction = self.__classifier.predict(features)
         except NotFittedError:
@@ -479,7 +476,4 @@ class GestureNodeModel(QObject):
 
         for gesture in self.__gestures:
             if gesture[self.GESTURE_ID] == prediction[0]:
-                print(gesture[self.GESTURE_NAME])  # TODO remove print
                 return gesture[self.GESTURE_NAME]
-
-        return "- no gesture detected -"
