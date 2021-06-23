@@ -1,0 +1,72 @@
+# Author: Martina
+# Reviewer: Claudia
+
+What is the title of the paper?
+“Avoiding pitfalls when using machine learning in HCI studies” (by Kostakos et al. [1])
+
+###########################################################################################################
+
+What are some common use cases for machine learning in practical applications or research prototypes?
+There are many use cases for studies with human subjects, such as activity recognition and wearable computing. 
+Machine Learning (ML) is especially helpful if one wishes to model human behavior for Human Behavior Analyses. 
+Also, for developing many User Interface Techniques, such as “to react to special user input (e.g. gesture recognition), 
+optimizing system resources (e.g. smartphone battery conservation [[2]]), provide intelligent mobile notifications” [1] 
+or to predict user’s future activities and interactions (with the aim to predict all).
+
+###########################################################################################################
+
+Which problems of machine learning do the authors of the paper identify? 
+The many risks one needs to be aware of to avoid pitfalls when using ML, a few of them are the following:
+1. To evaluate the system the researcher should do and document both results, for one if only the user’s data was used 
+and on the other side when the data of the whole population was used. Especially if the system requires data from other 
+users to work for new first-time users. 
+2. Sometimes clustering the users into user groups is necessary for correct predictions.
+3. Depending on their complexity and dimensionality from the given data some classification methods, are much more 
+difficult to interpret as other classic statistical methods would be.
+4. ML techniques often give inside about correlations, but these are not necessarily also causalities
+5. “Different techniques should be used in controlled vs. non-controlled experiments” [1], as non-controlled
+Designs can be analyzed but one needs to be even more careful.
+6. Classifiers with an accuracy above 80% are often considered variable, yet this accuracy also highly depends on the 
+relative likelihood of the event that should be measured. Therefore, researchers should also report the baseline 
+performance so one can differentiate between the two.
+7. The impact of “false positives” (a finding is reported even though there is none) should be considered more often.
+8. It is essential to know the used algorithm and the basics of machine learning when using it.
+
+Explain one of them in detail:
+“ML prediction accuracy cannot be used as substitute for classic hypothesis testing and correlation/causation analysis.” [1]
+Most times, especially in context with the user’s behavior, qualitative data is very important to interpret quantitative
+data, in such cases mixing different methods to obtain both are often needed. Yet applying ML techniques usually returns 
+quantitative data. Some researchers use additional observation to achieve this, yet this can’t always be done (for example 
+when a deep learning technique are used, in such cases much information about the used code should be documented). Given this 
+the authors believe that one should first use normal hypothesis testing and then afterwards use ML for estimation and prediction.
+
+###########################################################################################################
+
+What are the credentials of the authors with regard to machine learning? 
+The paper is only 5 pages with cover page and sources. Given its shortness it doesn’t contain many references, only seven. 
+Also, according to google scholar as well as ACM the paper ‘only’ got quoted nine times (state: 23.06.2021). 
+According to his own page the author Mirco Musolesi has “Machine Learning” as one of his fields of interest. Also, after 
+and before the paper appeared other papers using machine learning are and were created.
+
+Have they published research on machine learning (or using machine-learning techniques) previously?
+Before that they had no paper with machine learning as main topic, but both had many papers where it was used.
+For example, Vassilis Kostakos used machine learning to gain information from social media for an emergency response system [3] 
+and improving situational awareness in such a case [4], to model traffic patterns in an urban environment [5], to classify gaps 
+in the daily usage of the smartphone [6] or to improve observation methods of the live of medical patients [7].
+Mirco Musolesi also released the paper “Interpretable machine learning for mobile notification management: An overview of prefminer” [8] 
+in the same month. He previously had released a paper where he suggested many possible predictions with ML and data of mobile phones [9] 
+for people-centric sensing [10]. He further used ML to inform researchers and therapists with assessments of a person’s mental state [11] 
+Both have many more research papers published where they used ML.
+
+Sources:
+[1] Kostakos, V., & Musolesi, M. (2017). Avoiding pitfalls when using machine learning in HCI studies. interactions, 24(4), 34-37.
+[2] Kostakos, V., Ferreira, D., Goncalves, J., & Hosio, S. (2016, September). Modelling smartphone usage: a markov state transition model. In Proceedings of the 2016 ACM international joint conference on pervasive and ubiquitous computing (pp. 486-497).
+[3] Rogstadius, J., Kostakos, V., Laredo, J., & Vukovic, M. (2011, May). Towards real-time emergency response using crowd supported analysis of social media. In Proceedings of CHI workshop on crowdsourcing and human computation, systems, studies and platforms.
+[4] Rogstadius, J., Kostakos, V., Laredo, J., & Vukovic, M. (2011). Improving Situational Awareness in Emergencies through Crowd Supported Analysis of Social Media. In Poster presented at (pp. 2009-2011).
+[5] Perttunen, M., Kostakos, V., Riekki, J., & Ojala, T. (2015). Urban traffic analysis through multi-modal sensing. Personal and Ubiquitous Computing, 19(3), 709-721.
+[6] Van Berkel, N., Luo, C., Anagnostopoulos, T., Ferreira, D., Goncalves, J., Hosio, S., & Kostakos, V. (2016, May). A systematic assessment of smartphone usage gaps. In Proceedings of the 2016 CHI conference on human factors in computing systems (pp. 4711-4721).
+[7] Van Berkel, N., Hosio, S., Durkee, T., Carli, V., Wasserman, D., & Kostakos, V. (2016). Providing patient context to mental health professionals using mobile applications. In Proceedings of the CHI workshop on Computing and Mental Health (pp. 1-4).
+[8] Mehrotra, A., Hendley, R., & Musolesi, M. (2017). Interpretable machine learning for mobile notification management: An overview of prefminer. GetMobile: Mobile Computing and Communications, 21(2), 35-38.
+[9] Pejovic, V., & Musolesi, M. (2015). Anticipatory mobile computing: A survey of the state of the art and research challenges. ACM Computing Surveys (CSUR), 47(3), 1-29.
+[10] Campbell, A. T., Eisenman, S. B., Lane, N. D., Miluzzo, E., Peterson, R. A., Lu, H., ... & Ahn, G. S. (2008). The rise of people-centric sensing. IEEE Internet Computing, 12(4), 12-21.
+[11] Pejovic, V., Lathia, N., Mascolo, C., & Musolesi, M. (2016). Mobile-based experience sampling for behaviour research. In Emotions and personality in personalized services (pp. 141-161). Springer, Cham.
