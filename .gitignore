@@ -9,3 +9,4 @@ custom_nodes2.py
 notes.txt
 fft_buffer.py
 gesture_node2.ui
+activity_recognizer2.py

@@ -6,7 +6,7 @@ from node_constants import NodeKey
 
 """
 A FeatureExtractionFilterNode that reads in the accelerometer values from the BufferNode.
-And outputs the average fft over all values and the ffts for each value.
+And outputs the average fft over all values and the ffts for each value in a array.
 """
 
 
@@ -36,12 +36,12 @@ class FeatureExtractionFilterNode(Node):
         return np.abs(np.fft.fft(values) / len(values))[1:len(values) // 2]
 
     def process(self, **kwargs):
+        # buffer_size currently has a max size of 32
+        # to get more values the buffer_size of BufferNode can be increased
+
         x = kwargs[NodeKey.ACCEL_X.value]
         y = kwargs[NodeKey.ACCEL_Y.value]
         z = kwargs[NodeKey.ACCEL_Z.value]
-
-        # TODO maybe save values from previous processes for getting more data because 14 is a little bit
-        #  or increase buffer size
 
         # calculate average fft
         avg = []
@@ -50,10 +50,10 @@ class FeatureExtractionFilterNode(Node):
 
         fft_avg = FeatureExtractionFilterNode.__calculate_frequency(avg)
 
-        # one accel array of buffer has a max size of 32 according to DIPPID_pyqtnode.py BufferNode
-        fft_x = self.__calculate_frequency(x)
-        fft_y = self.__calculate_frequency(y)
-        fft_z = self.__calculate_frequency(z)
+        # calculate single ffts and combine them
+        fft_x = FeatureExtractionFilterNode.__calculate_frequency(x)
+        fft_y = FeatureExtractionFilterNode.__calculate_frequency(y)
+        fft_z = FeatureExtractionFilterNode.__calculate_frequency(z)
         fft = np.array([fft_x, fft_y, fft_z])
 
         return {NodeKey.SPECTROGRAM_AVG.value: fft_avg,  # used to plot the graph

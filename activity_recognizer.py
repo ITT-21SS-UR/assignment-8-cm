@@ -13,13 +13,17 @@ from node_constants import NodeKey
 
 """
 The workload was distributed evenly and tasks were discussed together.
+Usually the code (e.g. function and variable names) already describe what the code does so there are only some comments.
 
 # start program example:
 # python3 activity_recognizer.py 5700
 
+MainWindow is responsible for the main application like setting the flowchart, nodes and their connections.
 
-Errors like this are shown in the console that should be ignored. 
-qt.qpa.xcb: QXcbConnection: XCB error: 3 (BadWindow), sequence: 973, resource id: 24177709, major code: 40 (TranslateCoords), minor code: 0
+Errors like this are shown in the console that should be ignored:
+qt.qpa.xcb: QXcbConnection: XCB error: 3 (BadWindow), sequence: 973, resource id: 24177709,
+major code: 40 (TranslateCoords), minor code: 0
+
 This is a known bug that sometimes occurs when e.g. a dialog is closed.
 https://bugreports.qt.io/browse/QTBUG-56893
 """
@@ -106,8 +110,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.__flow_chart.connectTerminals(
             self.__feature_extraction_filter_node[NodeKey.SPECTROGRAM_AVG.value],
-            plot_spectrogram_node["In"]
-        )
+            plot_spectrogram_node["In"])
 
     def __setup_gesture(self):
         self.__gesture_node = self.__flow_chart.createNode(GestureNode.get_node_name(), pos=(200, 50))

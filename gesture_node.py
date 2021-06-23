@@ -1,4 +1,3 @@
-import ast
 from enum import Enum
 
 import pyqtgraph.flowchart.library as fclib
@@ -46,12 +45,13 @@ class GestureNode(Node):
         gesture_model = self.__gesture_node_widget.get_gesture_model()
         gesture_state = gesture_model.get_gesture_state()
 
-        gesture_output = "switch to prediction"
-
         if gesture_state == GestureNodeState.TRAINING:
             gesture_model.collect_training_data(kwargs)
+            gesture_output = "training state"
         elif gesture_state == GestureNodeState.PREDICTION:
             gesture_output = gesture_model.predict_gesture(kwargs)
+        else:
+            gesture_output = "inactive state"
 
         return {NodeKey.PREDICTED_GESTURE.value: gesture_output}
 
@@ -71,7 +71,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
         self.__gesture_model = GestureNodeModel()
         self.__setup_layout()
-        self.__gesture_model.setup_good_working_empty_gestures()
+        self.__gesture_model.setup_pre_added_gestures()
 
     def __setup_layout(self):
         self.__layout = QtWidgets.QVBoxLayout()
@@ -92,11 +92,17 @@ class GestureNodeWidget(QtWidgets.QWidget):
     def __setup_gesture_state_selection_layout(self):
         self.__state_selection_layout = QtWidgets.QVBoxLayout()
 
+        self.__setup_state_label()
         self.__setup_inactive_button()
         self.__setup_select_training_button()
         self.__setup_prediction_button()
 
         self.__layout.addLayout(self.__state_selection_layout)
+
+    def __setup_state_label(self):
+        state_label = QtWidgets.QLabel()
+        state_label.setText("State")
+        self.__state_selection_layout.addWidget(state_label)
 
     def __setup_select_training_button(self):
         self.__select_training_button = QtWidgets.QRadioButton(GestureNodeState.TRAINING.value)
@@ -246,7 +252,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
     def __connect_signals(self):
         self.__gesture_model.gesture_name_exists.connect(self.__show_gesture_name_exists)
-        self.__gesture_model.working_gestures_added.connect(self.__handle_gestures_added)
+        self.__gesture_model.pre_gestures_added.connect(self.__handle_gestures_added)
         self.__gesture_model.gesture_item_added.connect(self.__add_gesture_item)
         self.__gesture_model.state_changed.connect(self.__handle_state_changed)
 
@@ -299,7 +305,7 @@ class GestureNodeModel(QObject):
     state_changed = pyqtSignal([GestureNodeState])
     gesture_name_exists = pyqtSignal([str])
     gesture_item_added = pyqtSignal([str])
-    working_gestures_added = pyqtSignal([list])
+    pre_gestures_added = pyqtSignal([list])
 
     def __init__(self):
         super().__init__()
@@ -320,53 +326,25 @@ class GestureNodeModel(QObject):
     def __find_gesture_by_name(self, gesture_name):
         return next((gesture for gesture in self.__gestures if gesture[self.GESTURE_NAME] == gesture_name), None)
 
-    def __notify_pretrained_gestures(self):
+    def __notify_pre_added_gestures(self):
         gesture_names = []
         for gesture in self.__gestures:
             gesture_names.append(gesture[self.GESTURE_NAME])
 
-        self.working_gestures_added.emit(gesture_names)
+        self.pre_gestures_added.emit(gesture_names)
 
-        print(self.__gestures)
+    def setup_pre_added_gestures(self):
+        self.__add_gesture_name_to_gestures("stand")
+        self.__add_gesture_name_to_gestures("hop")
+        self.__add_gesture_name_to_gestures("shake")
 
-    def __convert_file_to_preprocessed_text(self, file_name):
-        with open(file_name) as hop_file:
-            whole_text = " ".join(line.rstrip() for line in hop_file)
+        self.__notify_pre_added_gestures()
 
-        # array has to be replaced else error
-        # ValueError: malformed node or string: <ast.Call object at 0x7f03d410b760>
-        # but is needed for correct prediction else another error occurs
-        # Im string nach array ein split
-        data = ast.literal_eval(whole_text.replace("array",
-                                                   ""))  # ast.literal_eval(whole_text.replace("array", ""))  # np.safe_eval(whole_text)
-        # data[self.GESTURE_DATA] = data[self.GESTURE_DATA][0]
-
-        return data
-
-    def setup_good_working_empty_gestures(self):
-        ###########################
-        # TODO use correct gesture_data, read from external file
-        self.__gestures.append({self.GESTURE_ID: 1,
-                                self.GESTURE_NAME: "stand",
+    def __add_gesture_name_to_gestures(self, gesture_name):
+        self.__gestures.append({self.GESTURE_ID: self.__id_count,
+                                self.GESTURE_NAME: gesture_name,
                                 self.GESTURE_DATA: []})
-
-        self.__gestures.append({self.GESTURE_ID: 2,
-                                self.GESTURE_NAME: "hop",
-                                self.GESTURE_DATA: []
-                                })
-
-        # hop_gesture = self.__convert_file_to_preprocessed_text("gesture_data_hop.txt")
-        # hop_gesture = self.__gestures[] # ("gesture_data_hop.txt")
-        # print(hop_gesture[self.GESTURE_DATA])
-        # self.__gestures.append(hop_gesture)
-
-        self.__gestures.append({self.GESTURE_ID: 3,
-                                self.GESTURE_NAME: "shake",
-                                self.GESTURE_DATA: []})
-
-        self.__id_count = 4
-
-        self.__notify_pretrained_gestures()
+        self.__id_count += 1
 
     def add_gesture(self, gesture_name: str):
         test = self.__gestures
@@ -375,10 +353,7 @@ class GestureNodeModel(QObject):
             self.gesture_name_exists.emit(gesture_name)
             return
 
-        self.__gestures.append({self.GESTURE_ID: self.__id_count,
-                                self.GESTURE_NAME: gesture_name,
-                                self.GESTURE_DATA: []})
-        self.__id_count += 1
+        self.__add_gesture_name_to_gestures(gesture_name)
 
         self.gesture_item_added.emit(gesture_name)
 
@@ -428,10 +403,11 @@ class GestureNodeModel(QObject):
         categories = []
 
         for gesture in self.__gestures:
+            gesture_id = gesture[self.GESTURE_ID]
+
             for data in gesture[self.GESTURE_DATA]:
-                feature = data[0].flatten()
-                samples.append(feature)
-                categories.append(gesture[self.GESTURE_ID])
+                samples.append(data[0])
+                categories.append(gesture_id)
 
         if not all(p == categories[0] for p in categories):
             self.__classifier.fit(samples, categories)
@@ -442,7 +418,8 @@ class GestureNodeModel(QObject):
         # adjusted to our needs ->  predict(self, kwargs)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
         try:
-            prediction = self.__classifier.predict(gesture_input[NodeKey.GESTURE_DATA.value])
+            gesture_data = gesture_input[NodeKey.GESTURE_DATA.value]
+            prediction = self.__classifier.predict(gesture_data)
         except NotFittedError:
             return "error while predicting"
 
