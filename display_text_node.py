@@ -4,8 +4,11 @@ from pyqtgraph.flowchart import Node
 
 from node_constants import NodeKey
 
+"""
+DisplayTextNode that displays the latest predicted category (the given text) on the screen.
+DisplayTextWidget is responsible for the UI of the DisplayTextNode / for setting the text.
+"""
 
-# DisplayTextNode that displays the latest predicted category on the screen.
 
 # Author: Claudia
 # Reviewer: Martina
@@ -27,9 +30,7 @@ class DisplayTextNode(Node):
 
     def process(self, **kwargs):
         text = kwargs[NodeKey.TEXT.value]
-
-        if text:
-            self.__display_text_widget.set_predicted_category_text(text)
+        self.__display_text_widget.set_predicted_category_text(text)
 
     def ctrlWidget(self):
         return self.__display_text_widget
@@ -48,11 +49,11 @@ class DisplayTextWidget(QtWidgets.QWidget):
 
         self.__category_info = QtWidgets.QLabel()
         self.__category_info.setText("predicted gesture:")
-        self.__category_info.setWordWrap(True)
         layout.addWidget(self.__category_info)
 
         self.__predicted_category = QtWidgets.QLabel()
         self.__predicted_category.setText("invalid state")
+        self.__predicted_category.setWordWrap(True)
         layout.addWidget(self.__predicted_category)
 
         self.setLayout(layout)

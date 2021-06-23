@@ -1,15 +1,20 @@
+import ast
 from enum import Enum
 
-import numpy as np
 import pyqtgraph.flowchart.library as fclib
 from PyQt5.QtCore import pyqtSignal, QObject
 from pyqtgraph.Qt import QtWidgets
 from pyqtgraph.flowchart import Node
-from scipy.fft import fft
 from sklearn import svm
 from sklearn.exceptions import NotFittedError
 
 from node_constants import NodeKey
+
+"""
+GestureNode that displays the latest predicted category (the given text) on the screen.
+GestureNodeWidget is responsible for the UI of the GestureNode.
+GestureNodeModel saves and processes relevant data for the GestureNodeWidget.
+"""
 
 
 # Author: Claudia
@@ -41,7 +46,7 @@ class GestureNode(Node):
         gesture_model = self.__gesture_node_widget.get_gesture_model()
         gesture_state = gesture_model.get_gesture_state()
 
-        gesture_output = "To recognize gestures switch to prediction state."
+        gesture_output = "switch to prediction"
 
         if gesture_state == GestureNodeState.TRAINING:
             gesture_model.collect_training_data(kwargs)
@@ -66,7 +71,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
         self.__gesture_model = GestureNodeModel()
         self.__setup_layout()
-        self.__gesture_model.setup_pretrained_gestures()
+        self.__gesture_model.setup_good_working_empty_gestures()
 
     def __setup_layout(self):
         self.__layout = QtWidgets.QVBoxLayout()
@@ -87,9 +92,9 @@ class GestureNodeWidget(QtWidgets.QWidget):
     def __setup_gesture_state_selection_layout(self):
         self.__state_selection_layout = QtWidgets.QVBoxLayout()
 
+        self.__setup_inactive_button()
         self.__setup_select_training_button()
         self.__setup_prediction_button()
-        self.__setup_inactive_button()
 
         self.__layout.addLayout(self.__state_selection_layout)
 
@@ -143,8 +148,8 @@ class GestureNodeWidget(QtWidgets.QWidget):
             self.__training_button.show()
 
         elif state == GestureNodeState.PREDICTION:
-            # TODO check how many trained gestures are available and change text accordingly
-            self.__info_text.setText("Predicted gesture is shown in DisplayText.")
+            self.__info_text.setText("Predicted gesture is shown in DisplayText.\n"
+                                     "A minimum of 2 trained gestures is required for prediction.")
             self.__training_button.hide()
 
         elif state == GestureNodeState.INACTIVE:
@@ -241,11 +246,11 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
     def __connect_signals(self):
         self.__gesture_model.gesture_name_exists.connect(self.__show_gesture_name_exists)
-        self.__gesture_model.pretrained_gestures_added.connect(self.__handle_pretrained_gestures_added)
+        self.__gesture_model.working_gestures_added.connect(self.__handle_gestures_added)
         self.__gesture_model.gesture_item_added.connect(self.__add_gesture_item)
         self.__gesture_model.state_changed.connect(self.__handle_state_changed)
 
-    def __handle_pretrained_gestures_added(self, gesture_names):
+    def __handle_gestures_added(self, gesture_names):
         for name in gesture_names:
             self.__add_gesture_item(name)
 
@@ -294,7 +299,7 @@ class GestureNodeModel(QObject):
     state_changed = pyqtSignal([GestureNodeState])
     gesture_name_exists = pyqtSignal([str])
     gesture_item_added = pyqtSignal([str])
-    pretrained_gestures_added = pyqtSignal([list])
+    working_gestures_added = pyqtSignal([list])
 
     def __init__(self):
         super().__init__()
@@ -315,93 +320,64 @@ class GestureNodeModel(QObject):
     def __find_gesture_by_name(self, gesture_name):
         return next((gesture for gesture in self.__gestures if gesture[self.GESTURE_NAME] == gesture_name), None)
 
-    @staticmethod
-    def __read_data(file_name):
-        # Wiimote - FFT - SVM.ipynb
-        # TODO in practice, you would do this with csv.Reader or pandas
-        x = []
-        y = []
-        z = []
-        avg = []
-
-        for line in open(file_name, "r").readlines():
-            _x, _y, _z = map(int, line.strip().split(","))
-            x.append(_x)
-            y.append(_y)
-            z.append(_z)
-            avg.append((_x + _y + _z) / 3)
-
-        return avg
-
-    def setup_pretrained_gestures(self):
-        # Wiimote - FFT - SVM.ipynb
-        # TODO setup pretrained gestures or just copy the data from own trial for the coressponding gestures
-        stand_csv = ["./data/stand_1.csv", "./data/stand_2.csv", "./data/stand_3.csv", "./data/stand_4.csv"]
-        walk_csv = ["./data/walk_1.csv", "./data/walk_2.csv", "./data/walk_3.csv", "./data/walk_4.csv"]
-        hop_csv = ["./data/hop1.csv", "./data/hop2.csv", "./data/hop3.csv", "./data/hop4.csv"]
-
-        stand_raw = [GestureNodeModel.__read_data(f) for f in stand_csv]
-        walk_raw = [GestureNodeModel.__read_data(f) for f in walk_csv]
-        hop_raw = [GestureNodeModel.__read_data(f) for f in hop_csv]
-
-        all = stand_raw + walk_raw + hop_raw
-        minlen = min([len(x) for x in all])
-        # print("Cutting off after", minlen, "samples")
-        stand_cut = [l[:minlen] for l in stand_raw]
-        walk_cut = [l[:minlen] for l in walk_raw]
-        hop_cut = [l[:minlen] for l in hop_raw]
-
-        # print(stand_cut[0])
-        # print(stand_raw)
-        # samples = list(zip(x, y, z)) # for each csv column map them to a tuple with (x,y,z)
-        # self.__gestures = # TODO set pretrained gestures
-
-        # Preprocessing Raw Data using the FFT
-        stand_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in stand_cut]
-        walk_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in walk_cut]
-        hop_freq = [np.abs(fft(l) / len(l))[1:len(l) // 2] for l in hop_cut]
-
-        # Train an SVM classifier
-        c = svm.SVC()
-        STAND = 0
-        WALK = 1
-        HOP = 2
-        categories = [STAND] * 3 + [WALK] * 3 + [HOP] * 3
-        training_data = stand_freq[1:] + walk_freq[1:] + hop_freq[1:]
-        c.fit(training_data, categories)
-        c.predict([stand_freq[0], walk_freq[0], hop_freq[0]])
-
-        ###########################
-        # TODO use correct gesture_data
-        # TODO function for adding data
-        self.__gestures.append({self.GESTURE_NAME: "stand",
-                                self.GESTURE_DATA: [],
-                                self.GESTURE_ID: 0})
-        self.__gestures.append({self.GESTURE_NAME: "walk",
-                                self.GESTURE_DATA: [],
-                                self.GESTURE_ID: 1})
-        self.__gestures.append({self.GESTURE_NAME: "hop",
-                                self.GESTURE_DATA: [],
-                                self.GESTURE_ID: 2})
-
-        self.__id_count = 3
-
+    def __notify_pretrained_gestures(self):
         gesture_names = []
         for gesture in self.__gestures:
             gesture_names.append(gesture[self.GESTURE_NAME])
 
-        self.pretrained_gestures_added.emit(gesture_names)
+        self.working_gestures_added.emit(gesture_names)
 
         print(self.__gestures)
 
+    def __convert_file_to_preprocessed_text(self, file_name):
+        with open(file_name) as hop_file:
+            whole_text = " ".join(line.rstrip() for line in hop_file)
+
+        # array has to be replaced else error
+        # ValueError: malformed node or string: <ast.Call object at 0x7f03d410b760>
+        # but is needed for correct prediction else another error occurs
+        # Im string nach array ein split
+        data = ast.literal_eval(whole_text.replace("array",
+                                                   ""))  # ast.literal_eval(whole_text.replace("array", ""))  # np.safe_eval(whole_text)
+        # data[self.GESTURE_DATA] = data[self.GESTURE_DATA][0]
+
+        return data
+
+    def setup_good_working_empty_gestures(self):
+        ###########################
+        # TODO use correct gesture_data, read from external file
+        self.__gestures.append({self.GESTURE_ID: 1,
+                                self.GESTURE_NAME: "stand",
+                                self.GESTURE_DATA: []})
+
+        self.__gestures.append({self.GESTURE_ID: 2,
+                                self.GESTURE_NAME: "hop",
+                                self.GESTURE_DATA: []
+                                })
+
+        # hop_gesture = self.__convert_file_to_preprocessed_text("gesture_data_hop.txt")
+        # hop_gesture = self.__gestures[] # ("gesture_data_hop.txt")
+        # print(hop_gesture[self.GESTURE_DATA])
+        # self.__gestures.append(hop_gesture)
+
+        self.__gestures.append({self.GESTURE_ID: 3,
+                                self.GESTURE_NAME: "shake",
+                                self.GESTURE_DATA: []})
+
+        self.__id_count = 4
+
+        self.__notify_pretrained_gestures()
+
     def add_gesture(self, gesture_name: str):
+        test = self.__gestures
+        print(test)
         if self.__exists_gesture_name(gesture_name):
             self.gesture_name_exists.emit(gesture_name)
             return
 
-        self.__gestures.append({self.GESTURE_NAME: gesture_name,
-                                self.GESTURE_DATA: [],
-                                self.GESTURE_ID: self.__id_count})
+        self.__gestures.append({self.GESTURE_ID: self.__id_count,
+                                self.GESTURE_NAME: gesture_name,
+                                self.GESTURE_DATA: []})
         self.__id_count += 1
 
         self.gesture_item_added.emit(gesture_name)
@@ -413,8 +389,6 @@ class GestureNodeModel(QObject):
             self.__selected_gesture_name = None
         else:
             self.train_gesture()
-
-        # TODO train model again if not empty
 
     def is_gestures_empty(self):
         return not self.__gestures
@@ -429,48 +403,46 @@ class GestureNodeModel(QObject):
     def set_selected_gesture_name(self, gesture_name):
         self.__selected_gesture_name = gesture_name
 
-    def collect_training_data(self, gesture_input):
-        if not self.__is_training:
-            return
-
-        selected_gesture = self.__find_gesture_by_name(self.__selected_gesture_name)
-        selected_gesture[self.GESTURE_DATA].append(
-            gesture_input[NodeKey.GESTURE_DATA.value])
-
-    def retrain_gesture(self, gesture_name: str):
-        gesture = self.__find_gesture_by_name(gesture_name)
-        gesture[self.GESTURE_DATA] = []  # clear gesture data
-
     def is_training(self):
         return self.__is_training
 
     def set_is_training(self, is_training):
         self.__is_training = is_training
 
+    def collect_training_data(self, gesture_input):
+        if not self.__is_training:
+            return
+
+        selected_gesture = self.__find_gesture_by_name(self.__selected_gesture_name)
+        selected_gesture[self.GESTURE_DATA].append(gesture_input[NodeKey.GESTURE_DATA.value])
+
+    def retrain_gesture(self, gesture_name: str):
+        gesture = self.__find_gesture_by_name(gesture_name)
+        gesture[self.GESTURE_DATA] = []  # clear gesture data
+        self.train_gesture()
+
     def train_gesture(self):
         # adjusted to our needs -> train(self)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
-        if self.__is_training:
-            samples = []
-            categories = []
+        samples = []
+        categories = []
 
-            for gesture in self.__gestures:
-                for data in gesture[self.GESTURE_DATA]:
-                    feature = data[0].flatten()
-                    samples.append(feature)
-                    categories.append(gesture[self.GESTURE_ID])
+        for gesture in self.__gestures:
+            for data in gesture[self.GESTURE_DATA]:
+                feature = data[0].flatten()
+                samples.append(feature)
+                categories.append(gesture[self.GESTURE_ID])
 
-            if not all(p == categories[0] for p in categories):
-                self.__classifier.fit(samples, categories)
+        if not all(p == categories[0] for p in categories):
+            self.__classifier.fit(samples, categories)
 
         self.set_is_training(False)
 
     def predict_gesture(self, gesture_input):
         # adjusted to our needs ->  predict(self, kwargs)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
-        features = gesture_input[NodeKey.GESTURE_DATA.value]
         try:
-            prediction = self.__classifier.predict(features)
+            prediction = self.__classifier.predict(gesture_input[NodeKey.GESTURE_DATA.value])
         except NotFittedError:
             return "error while predicting"
 

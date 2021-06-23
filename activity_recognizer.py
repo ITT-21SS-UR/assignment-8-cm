@@ -17,6 +17,7 @@ The workload was distributed evenly and tasks were discussed together.
 # start program example:
 # python3 activity_recognizer.py 5700
 
+
 Errors like this are shown in the console that should be ignored. 
 qt.qpa.xcb: QXcbConnection: XCB error: 3 (BadWindow), sequence: 973, resource id: 24177709, major code: 40 (TranslateCoords), minor code: 0
 This is a known bug that sometimes occurs when e.g. a dialog is closed.
@@ -40,7 +41,7 @@ class MainWindow(QtWidgets.QWidget):
         self.setWindowTitle("Activity Recognizer")
         self.move(QtWidgets.qApp.desktop().availableGeometry(
             self).center() - self.rect().center())
-        # self.showMaximized()  # TODO when program finished
+        self.setMinimumSize(1000, 700)
 
     def __setup_flowchart(self):
         self.__flow_chart = Flowchart(terminals={})
@@ -91,35 +92,22 @@ class MainWindow(QtWidgets.QWidget):
         self.__flow_chart.connectTerminals(self.__buffer_node_z[NodeKey.DATA_OUT.value],
                                            self.__feature_extraction_filter_node[NodeKey.ACCEL_Z.value])
 
-        self.__setup_spectrogram_avg()
-        self.__setup_spectrogram_x()
+        self.__setup_spectrogram()
 
-    def __setup_spectrogram_avg(self):
-        plot_time_signal = pg.PlotWidget()
-        plot_time_signal.setTitle("spectrogram average")
-        plot_time_signal.setYRange(0, 2)  # TODO range
-        self.__layout.addWidget(plot_time_signal, 0, 1)
+    def __setup_spectrogram(self):
+        plot_spectrogram = pg.PlotWidget()
+        plot_spectrogram.setTitle("spectrogram average")
+        plot_spectrogram.setYRange(0, 2)
+        plot_spectrogram.setXRange(0, 14)
+        self.__layout.addWidget(plot_spectrogram, 0, 1)
 
-        plot_time_signal_node = self.__flow_chart.createNode("PlotWidget", pos=(300, -100))
-        plot_time_signal_node.setPlot(plot_time_signal)
+        plot_spectrogram_node = self.__flow_chart.createNode("PlotWidget", pos=(300, -100))
+        plot_spectrogram_node.setPlot(plot_spectrogram)
 
         self.__flow_chart.connectTerminals(
             self.__feature_extraction_filter_node[NodeKey.SPECTROGRAM_AVG.value],
-            plot_time_signal_node["In"]
+            plot_spectrogram_node["In"]
         )
-
-    def __setup_spectrogram_x(self):
-        plot_spectrogram_x = pg.PlotWidget()
-        plot_spectrogram_x.setTitle("spectrogram x")
-        plot_spectrogram_x.setYRange(0, 2)  # TODO range
-        self.__layout.addWidget(plot_spectrogram_x, 1, 1)
-
-        plot_spectrogram_node_x = self.__flow_chart.createNode("PlotWidget", pos=(300, -50))
-        plot_spectrogram_node_x.setPlot(plot_spectrogram_x)
-
-        self.__flow_chart.connectTerminals(
-            self.__feature_extraction_filter_node[NodeKey.SPECTROGRAM_X.value],
-            plot_spectrogram_node_x["In"])
 
     def __setup_gesture(self):
         self.__gesture_node = self.__flow_chart.createNode(GestureNode.get_node_name(), pos=(200, 50))
