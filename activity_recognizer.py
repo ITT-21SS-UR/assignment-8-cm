@@ -13,7 +13,9 @@ from node_constants import NodeKey
 
 """
 The workload was distributed evenly and tasks were discussed together.
-Usually the code (e.g. function and variable names) already describe what the code does so there are only some comments.
+
+Usually the code (e.g. function and variable names) already describes
+what the code does (code is self-explanatory) so there are only some comments.
 
 # start program example:
 # python3 activity_recognizer.py 5700

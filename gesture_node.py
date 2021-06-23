@@ -19,15 +19,17 @@ GestureNodeWidget is responsible for the UI of the GestureNode.
 
 GestureNodeModel saves and processes relevant data for the GestureNodeWidget and GestureNode.
     Is used to add, remove, predict, retrain, train gestures and to collect training data.
-    Emits signals when a layout element should be changed. E.g. when a user removes a gesture.
+    Emits signals when a layout element should be changed e.g. when the state changes.
 
 Gestures that are good for prediction:
     - stand still
     - hop
-    - shake
+    - shake (e.g. left-to-right or rotate shake)
 
-There was no requirement that the gestures have to be pre trained so the user has to train them themselves.
-They are only added with empty training data so that they don't have to be added manually.
+There was no requirement in the task that the gestures have to be pre-trained
+so the user has to train them individually.
+They are only added with empty training data so that the names don't have to be added manually.
+For recognition the only script accurately detects 3 different gestures.
 """
 
 
