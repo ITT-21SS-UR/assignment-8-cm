@@ -10,9 +10,24 @@ from sklearn.exceptions import NotFittedError
 from node_constants import NodeKey
 
 """
-GestureNode that displays the latest predicted category (the given text) on the screen.
+GestureNode that outputs the latest predicted gesture, state or an error as a dict with a string.
+    Processes input data depending on the state of the model and returns the relevant text.
+
 GestureNodeWidget is responsible for the UI of the GestureNode.
-GestureNodeModel saves and processes relevant data for the GestureNodeWidget.
+    Is used for layout components and its UI changes e.g. setting, connecting signals to button clicks
+    so that the model can handle them.
+
+GestureNodeModel saves and processes relevant data for the GestureNodeWidget and GestureNode.
+    Is used to add, remove, predict, retrain, train gestures and to collect training data.
+    Emits signals when a layout element should be changed. E.g. when a user removes a gesture.
+
+Gestures that are good for prediction:
+    - stand still
+    - hop
+    - shake
+
+There was no requirement that the gestures have to be pre trained so the user has to train them themselves.
+They are only added with empty training data so that they don't have to be added manually.
 """
 
 
@@ -48,8 +63,10 @@ class GestureNode(Node):
         if gesture_state == GestureNodeState.TRAINING:
             gesture_model.collect_training_data(kwargs)
             gesture_output = "training state"
+
         elif gesture_state == GestureNodeState.PREDICTION:
             gesture_output = gesture_model.predict_gesture(kwargs)
+
         else:
             gesture_output = "inactive state"
 
@@ -155,7 +172,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
         elif state == GestureNodeState.PREDICTION:
             self.__info_text.setText("Predicted gesture is shown in DisplayText.\n"
-                                     "A minimum of 2 trained gestures is required for prediction.")
+                                     "A minimum of 2 trained gestures is required for correct prediction.")
             self.__training_button.hide()
 
         elif state == GestureNodeState.INACTIVE:
@@ -164,7 +181,7 @@ class GestureNodeWidget(QtWidgets.QWidget):
 
     def __handle_stop_training(self):
         self.__training_button.setText(self.BEGIN_TRAINING_TEXT)
-        self.__gesture_model.train_gesture()
+        self.__gesture_model.train_gestures()
 
     def __setup_training_button(self):
         self.__training_button = QtWidgets.QPushButton()
@@ -309,6 +326,7 @@ class GestureNodeModel(QObject):
 
     def __init__(self):
         super().__init__()
+
         self.__gestures = []
         self.__id_count = 0
         self.__gesture_state = GestureNodeState.INACTIVE
@@ -347,8 +365,6 @@ class GestureNodeModel(QObject):
         self.__id_count += 1
 
     def add_gesture(self, gesture_name: str):
-        test = self.__gestures
-        print(test)
         if self.__exists_gesture_name(gesture_name):
             self.gesture_name_exists.emit(gesture_name)
             return
@@ -362,8 +378,8 @@ class GestureNodeModel(QObject):
 
         if self.is_gestures_empty():
             self.__selected_gesture_name = None
-        else:
-            self.train_gesture()
+
+        self.train_gestures()  # all gestures have to be trained again
 
     def is_gestures_empty(self):
         return not self.__gestures
@@ -394,9 +410,9 @@ class GestureNodeModel(QObject):
     def retrain_gesture(self, gesture_name: str):
         gesture = self.__find_gesture_by_name(gesture_name)
         gesture[self.GESTURE_DATA] = []  # clear gesture data
-        self.train_gesture()
+        self.train_gestures()  # all gestures have to be trained again
 
-    def train_gesture(self):
+    def train_gestures(self):
         # adjusted to our needs -> train(self)
         # https://github.com/ITT-21SS-UR/assignment-8-jl-8/blob/main/activity_recognizer.py
         samples = []
@@ -423,6 +439,9 @@ class GestureNodeModel(QObject):
         except NotFittedError:
             return "error while predicting"
 
+        # return the name of the predicted gesture
         for gesture in self.__gestures:
             if gesture[self.GESTURE_ID] == prediction[0]:
                 return gesture[self.GESTURE_NAME]
+
+        return "no gesture detected"
